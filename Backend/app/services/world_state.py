@@ -11,12 +11,16 @@ Deterministic decisions locked here (documented for the monitor):
   dueToday number is always computed live from `flashcards.due`.
 - `lamp_glow_level`: min(1.0, record_count * 0.1) — increases with record
   count, capped, subtle (FR-4.4).
-- `active_plan`: the user's most recently created study plan (Phase 1).
-- `reviewing` / `pending_tour`: null in Phase 1 (review sessions + tours are
-  Phase 2); the contract allows null.
+- `active_plan`: the user's most recently created study plan.
 - `graph_summary.updated_at`: null — migration 001 kg tables carry no
   timestamp column and we do not invent one (contract allows null).
 - Journal timeline order: newest record first.
+- `pending_tour` (Phase 2): derived from the event log — the latest
+  `tour_offer` with no later `tour_start`/`tour_end` for that roadmap.
+- `reviewing` (Phase 2): the deck whose boatState is "reviewing" (set/
+  restored by the review service), currentCard from the ONE session
+  derivation (services/review_session.py). answerRevealed rebuilds as false
+  — the answer is re-revealable via REST (documented).
 """
 
 from datetime import UTC, datetime, time, timedelta
@@ -28,6 +32,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models as m
 from app import schemas as s
+from app.core.errors import AppError
+from app.services.review_session import card_schema, session_state
 
 # FR-4.4: each record nudges the lamp; capped at full glow.
 LAMP_GLOW_PER_RECORD = 0.1
@@ -41,32 +47,45 @@ def _end_of_local_today(now_utc: datetime, timezone: str) -> datetime:
     return next_midnight.astimezone(UTC)
 
 
+def task_schema(t: m.StudyTask) -> s.StudyTask:
+    """THE one ORM→contract mapping for StudyTask (reused by scheduler service)."""
+    return s.StudyTask(
+        id=t.id,
+        title=t.title,
+        description=t.description,
+        estimate_minutes=t.estimate_minutes,
+        difficulty=t.difficulty,
+        status=cast(s.TaskStatus, t.status),  # writers are Literal-checked
+        scheduled_for=t.scheduled_for,
+        slot=t.slot,
+        depends_on=[str(dep) for dep in t.depends_on],
+        deck_request=(
+            None
+            if t.deck_request is None
+            else s.DeckRequest.model_validate(t.deck_request)
+        ),
+        world_label=t.world_label,
+    )
+
+
+def record_schema(r: m.Record) -> s.Record:
+    """THE one ORM→contract mapping for Record (reused by scheduler/review)."""
+    return s.Record(
+        id=r.id,
+        kind=cast(s.RecordKind, r.kind),  # writers are Literal-checked
+        ref_id=r.ref_id,
+        title=r.title,
+        at=r.at,
+    )
+
+
 def _plan_schema(plan: m.StudyPlan, tasks: list[m.StudyTask]) -> s.StudyPlan:
     return s.StudyPlan(
         id=plan.id,
         goal=plan.goal,
         empathy_line=plan.empathy_line,
         granularity=plan.granularity,
-        tasks=[
-            s.StudyTask(
-                id=t.id,
-                title=t.title,
-                description=t.description,
-                estimate_minutes=t.estimate_minutes,
-                difficulty=t.difficulty,
-                status=cast(s.TaskStatus, t.status),  # writers are Literal-checked
-                scheduled_for=t.scheduled_for,
-                slot=t.slot,
-                depends_on=[str(dep) for dep in t.depends_on],
-                deck_request=(
-                    None
-                    if t.deck_request is None
-                    else s.DeckRequest.model_validate(t.deck_request)
-                ),
-                world_label=t.world_label,
-            )
-            for t in tasks
-        ],
+        tasks=[task_schema(t) for t in tasks],
     )
 
 
@@ -134,16 +153,7 @@ async def list_records(session: AsyncSession, user: m.User) -> list[s.Record]:
         .scalars()
         .all()
     )
-    return [
-        s.Record(
-            id=r.id,
-            kind=cast(s.RecordKind, r.kind),  # writers are Literal-checked
-            ref_id=r.ref_id,
-            title=r.title,
-            at=r.at,
-        )
-        for r in rows
-    ]
+    return [record_schema(r) for r in rows]
 
 
 async def build_kg_graph(session: AsyncSession, user: m.User) -> s.KnowledgeGraph:
@@ -190,6 +200,97 @@ async def build_kg_graph(session: AsyncSession, user: m.User) -> s.KnowledgeGrap
             )
             for e in edge_rows
         ],
+    )
+
+
+async def _pending_tour(session: AsyncSession, user: m.User) -> s.PendingTour | None:
+    """Latest tour_offer with no later tour_start/tour_end for that roadmap."""
+    rows = (
+        (
+            await session.execute(
+                select(m.EventOutbox)
+                .where(
+                    m.EventOutbox.user_id == user.id,
+                    m.EventOutbox.type.in_(["tour_offer", "tour_start", "tour_end"]),
+                )
+                .order_by(m.EventOutbox.seq)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    pending_id: str | None = None
+    for row in rows:
+        if row.type == "tour_offer":
+            pending_id = str(row.payload.get("roadmapId"))
+        elif row.type == "tour_start":
+            roadmap = row.payload.get("roadmap")
+            if (
+                pending_id
+                and isinstance(roadmap, dict)
+                and roadmap.get("id") == pending_id
+            ):
+                pending_id = None
+        elif row.type == "tour_end":
+            pending_id = None
+    if pending_id is None:
+        return None
+    roadmap_row = (
+        await session.execute(
+            select(m.Roadmap).where(
+                m.Roadmap.id == pending_id, m.Roadmap.user_id == user.id
+            )
+        )
+    ).scalar_one_or_none()
+    if roadmap_row is None:
+        # An offer referencing a roadmap we never persisted is a data bug —
+        # fail loudly, never silently drop the tour (AGENTS.md §2).
+        raise AppError(
+            500,
+            "ROADMAP_MISSING",
+            "A tour offer points at a roadmap that does not exist.",
+            detail={"roadmapId": pending_id},
+            recoverable=False,
+        )
+    if roadmap_row.plan_id is None:
+        raise AppError(
+            500,
+            "ROADMAP_MISSING",
+            "A tour roadmap has no plan reference.",
+            detail={"roadmapId": pending_id},
+            recoverable=False,
+        )
+    return s.PendingTour(
+        roadmap_id=roadmap_row.id,
+        roadmap=s.Roadmap(
+            id=roadmap_row.id,
+            plan_id=roadmap_row.plan_id,
+            steps=[s.RoadmapStep.model_validate(st) for st in roadmap_row.steps],
+        ),
+    )
+
+
+async def _reviewing(session: AsyncSession, user: m.User) -> s.ReviewingState | None:
+    """The deck currently in review POV (boatState "reviewing"), if any."""
+    deck = (
+        (
+            await session.execute(
+                select(m.Deck)
+                .where(m.Deck.user_id == user.id, m.Deck.boat_state == "reviewing")
+                .order_by(m.Deck.created_at.desc(), m.Deck.id)
+                .limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+    if deck is None:
+        return None
+    state = await session_state(session, user.id, deck.id, datetime.now(UTC))
+    return s.ReviewingState(
+        deck_id=deck.id,
+        current_card=card_schema(state.remaining[0]) if state.remaining else None,
+        answer_revealed=False,
     )
 
 
@@ -258,12 +359,12 @@ async def build_world_state(session: AsyncSession, user: m.User) -> s.WorldState
         ),
         active_plan=active_plan,
         decks=decks,
-        reviewing=None,  # Phase 2
+        reviewing=await _reviewing(session, user),
         records=records,
         graph_summary=s.GraphSummary(
             node_count=node_count, edge_count=edge_count, updated_at=None
         ),
         lamp_glow_level=min(1.0, len(records) * LAMP_GLOW_PER_RECORD),
-        pending_tour=None,  # Phase 2
+        pending_tour=await _pending_tour(session, user),
         last_event_seq=last_seq,
     )

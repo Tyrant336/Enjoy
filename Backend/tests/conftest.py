@@ -158,6 +158,14 @@ async def live_server(_test_database: str) -> AsyncIterator[str]:
         server.should_exit = True
         await serve_task
         await dispose_engine()
+        # sse-starlette keeps a process-global exit Event bound to the FIRST
+        # event loop that used it; pytest-asyncio gives each test a fresh
+        # loop, so the next live_server test would crash with "bound to a
+        # different event loop". It is lazily recreated (sse.py:187) —
+        # resetting to None is the documented test pattern.
+        from sse_starlette.sse import AppStatus
+
+        AppStatus.should_exit_event = None
 
 
 @pytest.fixture

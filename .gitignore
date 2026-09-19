@@ -54,3 +54,6 @@ opensource/07-underwater-atlas/app/dist/
 opensource/07-underwater-atlas/app/node_modules/
 
 .labshots/
+
+# Agent curl-journey artifacts (local scratch, never committed)
+Backend/.scratch/

@@ -7,7 +7,7 @@ seeded-data read endpoints + SSE outbox stream (app/api/, app/services/).
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import agents, world
+from app.api import agents, chat, world
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
 
     app.include_router(world.router)
     app.include_router(agents.router)
+    app.include_router(chat.router)
 
     @app.get("/health")
     async def health() -> dict[str, object]:

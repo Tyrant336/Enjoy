@@ -1,0 +1,1045 @@
+{
+  "_generated": "GENERATED — do not edit. Produced by Backend/scripts/export_atlas_fixture.py from Backend/scripts/fixtures/seed_data.json (the one source of truth, REQUIREMENTS §4.6). Regenerate, never hand-edit.",
+  "nodes": [
+    {
+      "id": "temperature",
+      "label": "Temperature",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Measure of the average kinetic energy of a system's particles.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": [
+        "task-thermo-03"
+      ]
+    },
+    {
+      "id": "heat",
+      "label": "Heat",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Energy transferred because of a temperature difference.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": [
+        "task-thermo-03"
+      ]
+    },
+    {
+      "id": "work",
+      "label": "Work",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Energy transferred when a force acts through a distance, like expansion.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "internal-energy",
+      "label": "Internal energy",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Total microscopic kinetic and potential energy stored in a system.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": [
+        "task-thermo-03"
+      ]
+    },
+    {
+      "id": "thermal-equilibrium",
+      "label": "Thermal equilibrium",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Two bodies at the same temperature with no net heat flow.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": [
+        "task-thermo-03"
+      ]
+    },
+    {
+      "id": "zeroth-law",
+      "label": "Zeroth law",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Systems in equilibrium with a common third are in equilibrium with each other.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": [
+        "task-thermo-01"
+      ]
+    },
+    {
+      "id": "thermodynamic-system",
+      "label": "Thermodynamic system",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "The chosen part of the universe under study.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "surroundings",
+      "label": "Surroundings",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Everything outside the system that can exchange energy with it.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "system-boundary",
+      "label": "System boundary",
+      "type": "Term",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "The real or imaginary surface separating system from surroundings.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "state-function",
+      "label": "State function",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "A property fixed by the current state, independent of path.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "ideal-gas",
+      "label": "Ideal gas",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Model gas of point particles with only elastic collisions.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "gas-laws",
+      "label": "Gas laws",
+      "type": "Formula",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Combined relation of pressure, volume, and temperature: PV = nRT.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "pressure",
+      "label": "Pressure",
+      "type": "Term",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Force per unit area from particle collisions with the walls.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "volume",
+      "label": "Volume",
+      "type": "Term",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "The space a system occupies; a basic state variable.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "kelvin-scale",
+      "label": "Kelvin scale",
+      "type": "Term",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Absolute temperature scale beginning at absolute zero.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "thermometer",
+      "label": "Thermometer",
+      "type": "Example",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Everyday application of the zeroth law.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "heat-capacity",
+      "label": "Heat capacity",
+      "type": "Concept",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Heat needed to raise a body's temperature by one degree.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "specific-heat",
+      "label": "Specific heat",
+      "type": "Formula",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "q = mcΔT — heat capacity per unit mass.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "calorimetry",
+      "label": "Calorimetry",
+      "type": "Process",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Measuring heat exchange via temperature change in an insulated vessel.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "phase-change",
+      "label": "Phase change",
+      "type": "Process",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Transition between solid, liquid, and gas with latent heat.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "conduction",
+      "label": "Conduction",
+      "type": "Process",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Heat transfer through direct contact.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "convection",
+      "label": "Convection",
+      "type": "Process",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Heat transfer by bulk fluid motion.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "radiation",
+      "label": "Radiation",
+      "type": "Process",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "Heat transfer by electromagnetic waves.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "energy-units",
+      "label": "Energy units",
+      "type": "Term",
+      "clusterId": "deck-thermo-basics",
+      "gloss": "The joule is the SI unit of energy; calories appear in older texts.",
+      "deckIds": [
+        "deck-thermo-basics"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "first-law",
+      "label": "First law",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Energy is conserved: ΔU = q + w.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-01"
+      ]
+    },
+    {
+      "id": "second-law",
+      "label": "Second law",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "The entropy of an isolated system never decreases.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-01"
+      ]
+    },
+    {
+      "id": "third-law",
+      "label": "Third law",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Entropy approaches a constant minimum near absolute zero.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-01"
+      ]
+    },
+    {
+      "id": "entropy",
+      "label": "Entropy",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "State function measuring how spread out a system's energy is.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-04"
+      ]
+    },
+    {
+      "id": "entropy-formula",
+      "label": "Entropy formula",
+      "type": "Formula",
+      "clusterId": "deck-thermo-1",
+      "gloss": "ΔS = q_rev / T for a reversible transfer at temperature T.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-04"
+      ]
+    },
+    {
+      "id": "entropy-of-universe",
+      "label": "Entropy of the universe",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "System plus surroundings entropy; it never decreases.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "spontaneous-process",
+      "label": "Spontaneous process",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "A change that proceeds on its own, raising total entropy.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-04"
+      ]
+    },
+    {
+      "id": "enthalpy",
+      "label": "Enthalpy",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "H = U + PV; tracks heat exchanged at constant pressure.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "free-energy",
+      "label": "Gibbs free energy",
+      "type": "Formula",
+      "clusterId": "deck-thermo-1",
+      "gloss": "ΔG = ΔH − TΔS; negative means spontaneous.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "carnot-cycle",
+      "label": "Carnot cycle",
+      "type": "Process",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Ideal reversible cycle of two isothermal and two adiabatic steps.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "carnot-efficiency",
+      "label": "Carnot efficiency",
+      "type": "Formula",
+      "clusterId": "deck-thermo-1",
+      "gloss": "η = 1 − Tc/Th, the ceiling for any heat engine.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "heat-engine",
+      "label": "Heat engine",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Device turning heat into work between hot and cold reservoirs.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "heat-pump",
+      "label": "Heat pump",
+      "type": "Example",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Moves heat from cold to hot using work; a reversed engine.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "refrigerator",
+      "label": "Refrigerator",
+      "type": "Example",
+      "clusterId": "deck-thermo-1",
+      "gloss": "A household heat pump cooling a box by exhausting heat.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "steam-engine",
+      "label": "Steam engine",
+      "type": "Example",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Historic heat engine of the industrial revolution.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "isothermal",
+      "label": "Isothermal process",
+      "type": "Process",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Constant-temperature change.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-02"
+      ]
+    },
+    {
+      "id": "adiabatic",
+      "label": "Adiabatic process",
+      "type": "Process",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Change with no heat exchanged.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-02"
+      ]
+    },
+    {
+      "id": "isobaric",
+      "label": "Isobaric process",
+      "type": "Process",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Constant-pressure change.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-02"
+      ]
+    },
+    {
+      "id": "isochoric",
+      "label": "Isochoric process",
+      "type": "Process",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Constant-volume change, so no expansion work.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": [
+        "task-thermo-02"
+      ]
+    },
+    {
+      "id": "reversible-process",
+      "label": "Reversible process",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Ideal infinitely slow change, undoable with no net effect.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "irreversible-process",
+      "label": "Irreversible process",
+      "type": "Concept",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Any real spontaneous change; it raises the universe's entropy.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "absolute-zero",
+      "label": "Absolute zero",
+      "type": "Term",
+      "clusterId": "deck-thermo-1",
+      "gloss": "0 K — the lower limit of temperature.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "perpetual-motion",
+      "label": "Perpetual motion machine",
+      "type": "Example",
+      "clusterId": "deck-thermo-1",
+      "gloss": "Impossible machines forbidden by the first and second laws.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    },
+    {
+      "id": "work-formula",
+      "label": "Expansion work formula",
+      "type": "Formula",
+      "clusterId": "deck-thermo-1",
+      "gloss": "w = −PΔV for expansion against constant pressure.",
+      "deckIds": [
+        "deck-thermo-1"
+      ],
+      "taskIds": []
+    }
+  ],
+  "links": [
+    {
+      "source": "thermodynamic-system",
+      "target": "surroundings",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "system-boundary",
+      "target": "thermodynamic-system",
+      "type": "PART_OF"
+    },
+    {
+      "source": "surroundings",
+      "target": "system-boundary",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "state-function",
+      "target": "internal-energy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "temperature",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "pressure",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "volume",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "internal-energy",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "zeroth-law",
+      "target": "thermal-equilibrium",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "zeroth-law",
+      "target": "temperature",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "thermometer",
+      "target": "zeroth-law",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "thermometer",
+      "target": "thermal-equilibrium",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "kelvin-scale",
+      "target": "temperature",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "thermometer",
+      "target": "kelvin-scale",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "heat",
+      "target": "work",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "internal-energy",
+      "target": "heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "internal-energy",
+      "target": "work",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "ideal-gas",
+      "target": "gas-laws",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "ideal-gas",
+      "target": "pressure",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "ideal-gas",
+      "target": "thermodynamic-system",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "gas-laws",
+      "target": "pressure",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "gas-laws",
+      "target": "volume",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "gas-laws",
+      "target": "temperature",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "gas-laws",
+      "target": "state-function",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "heat-capacity",
+      "target": "specific-heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "specific-heat",
+      "target": "heat-capacity",
+      "type": "PART_OF"
+    },
+    {
+      "source": "specific-heat",
+      "target": "temperature",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "calorimetry",
+      "target": "heat-capacity",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "calorimetry",
+      "target": "specific-heat",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "calorimetry",
+      "target": "thermal-equilibrium",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "phase-change",
+      "target": "heat",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "phase-change",
+      "target": "heat",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "conduction",
+      "target": "heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "convection",
+      "target": "heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "radiation",
+      "target": "heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "conduction",
+      "target": "convection",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "radiation",
+      "target": "conduction",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "thermal-equilibrium",
+      "target": "temperature",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "energy-units",
+      "target": "heat",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "energy-units",
+      "target": "work",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "energy-units",
+      "target": "internal-energy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "heat",
+      "target": "temperature",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "heat-capacity",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "heat-capacity",
+      "target": "temperature",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "thermodynamic-system",
+      "target": "state-function",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "work",
+      "target": "pressure",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "second-law",
+      "target": "entropy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "third-law",
+      "target": "entropy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "third-law",
+      "target": "absolute-zero",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "second-law",
+      "target": "irreversible-process",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "entropy-formula",
+      "target": "entropy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "entropy-formula",
+      "target": "reversible-process",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "reversible-process",
+      "target": "irreversible-process",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "reversible-process",
+      "target": "entropy-formula",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "entropy-of-universe",
+      "target": "entropy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "entropy-of-universe",
+      "target": "second-law",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "spontaneous-process",
+      "target": "irreversible-process",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "spontaneous-process",
+      "target": "second-law",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "free-energy",
+      "target": "spontaneous-process",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "free-energy",
+      "target": "enthalpy",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "free-energy",
+      "target": "entropy",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "enthalpy",
+      "target": "first-law",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "carnot-cycle",
+      "target": "heat-engine",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "carnot-cycle",
+      "target": "isothermal",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "carnot-cycle",
+      "target": "adiabatic",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "carnot-cycle",
+      "target": "reversible-process",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "carnot-efficiency",
+      "target": "carnot-cycle",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "carnot-efficiency",
+      "target": "heat-engine",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "heat-engine",
+      "target": "second-law",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "heat-pump",
+      "target": "heat-engine",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "refrigerator",
+      "target": "heat-pump",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "steam-engine",
+      "target": "heat-engine",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "isothermal",
+      "target": "adiabatic",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "isobaric",
+      "target": "isochoric",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "work-formula",
+      "target": "isobaric",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "perpetual-motion",
+      "target": "first-law",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "perpetual-motion",
+      "target": "second-law",
+      "type": "CONTRASTS_WITH"
+    },
+    {
+      "source": "irreversible-process",
+      "target": "second-law",
+      "type": "EXAMPLE_OF"
+    },
+    {
+      "source": "adiabatic",
+      "target": "entropy-formula",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "isochoric",
+      "target": "work-formula",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "refrigerator",
+      "target": "heat-pump",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "first-law",
+      "target": "internal-energy",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "enthalpy",
+      "target": "internal-energy",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "entropy",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "enthalpy",
+      "target": "state-function",
+      "type": "PART_OF"
+    },
+    {
+      "source": "isothermal",
+      "target": "temperature",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "isobaric",
+      "target": "pressure",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "isochoric",
+      "target": "volume",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "adiabatic",
+      "target": "work",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "work-formula",
+      "target": "work",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "absolute-zero",
+      "target": "kelvin-scale",
+      "type": "PART_OF"
+    },
+    {
+      "source": "third-law",
+      "target": "kelvin-scale",
+      "type": "EXPLAINS"
+    },
+    {
+      "source": "heat-engine",
+      "target": "heat",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "heat-pump",
+      "target": "work",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "steam-engine",
+      "target": "heat",
+      "type": "REQUIRES"
+    },
+    {
+      "source": "first-law",
+      "target": "heat",
+      "type": "EXPLAINS"
+    }
+  ]
+}

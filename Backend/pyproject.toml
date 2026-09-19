@@ -33,9 +33,9 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
-# Coverage report always prints (AGENTS.md §6). The >=90% fail-under gate is
-# added when CI exists; until then the report is informational only.
-addopts = "--cov=app --cov=scripts --cov-report=term-missing"
+# Coverage report always prints; the AGENTS.md §6 >=90% gate is enforced on
+# every run (monitor decision, session 017 — no CI needed to enforce it).
+addopts = "--cov=app --cov=scripts --cov-report=term-missing --cov-fail-under=90"
 
 # SQLAlchemy async hops through greenlets; without this the line tracer
 # reports false misses on lines that provably execute (session 013).

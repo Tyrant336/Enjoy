@@ -20,7 +20,7 @@ Rules: `../AGENTS.md` · Product contract: `../docs/REQUIREMENTS.md`.
 ```bash
 uv venv .venv
 uv pip install --python .venv/Scripts/python.exe -e .
-uv pip install --python .venv/Scripts/python.exe pytest==8.3.4 pytest-asyncio==0.24.0 ruff==0.8.4 mypy==1.13.0
+uv pip install --python .venv/Scripts/python.exe pytest==8.3.4 pytest-asyncio==0.24.0 pytest-cov==6.0.0 httpx==0.28.1 ruff==0.8.4 mypy==1.13.0
 ```
 
 (Windows paths shown; on Unix use `.venv/bin/python`.)
@@ -38,8 +38,11 @@ All commands from `Backend/` with the venv python:
 .venv/Scripts/python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 # → GET http://127.0.0.1:8000/health → {"status":"ok"}
 
-# Tests
+# Tests (see "Testing" below — real Postgres, coverage gate ≥90%)
 .venv/Scripts/python.exe -m pytest
+
+# NFR-2 no-red palette check (also runs inside pytest; exit 1 = red found)
+.venv/Scripts/python.exe scripts/no_red_check.py
 
 # Lint / typecheck (AGENTS.md §9 gate — must be clean)
 .venv/Scripts/python.exe -m ruff check .
@@ -69,9 +72,24 @@ alembic/
 scripts/
   seed.py          # THE ONLY seed loader — wipe + re-seed the fixture user (idempotent)
   seed_dates.py    # THE one relative-date-token resolver (Agent S) — used by seed.py
+  export_atlas_fixture.py # §4.6 graph → frontend/lib/fixtures/atlas-seed.json (anti-drift)
+  no_red_check.py  # NFR-2 no-red palette checker (theme tokens + cluster palette)
   fixtures/
     seed_data.json # THE ONLY seed content (Agent S, canonical §4.6 fixture)
 tests/               # pytest (asyncio_mode=auto); real Postgres `harbour_test` per session
+
+## Testing (AGENTS.md §6)
+
+- **Real Postgres, never SQLite:** the suite creates a fresh `harbour_test`
+  database per session and migrates it with `alembic upgrade head`
+  (`tests/conftest.py`). Fixtures: `client` (in-process ASGI), `live_client`
+  (REAL in-test uvicorn — required for SSE; ASGITransport cannot drive
+  infinite streams, docs/sessions/015), `db_session`, `seeded_user_id`.
+- **Coverage gate: ≥90% enforced on every run** (`--cov-fail-under=90` in
+  `pyproject.toml`; monitor decision, session 017).
+- `tests/test_e2e_demo.py` is the §8 demo script as tests; skip-gates flip
+  live as Phase 2 endpoints land. Browser-level halves (keyboard,
+  reduced-motion): `../docs/PHASE3-E2E-CHECKLIST.md`.
 ```
 
 ## Seeding (deliberate, idempotent — test data, not a mode; AGENTS.md §2.3/§3.4)

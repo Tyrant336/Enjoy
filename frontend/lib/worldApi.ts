@@ -18,6 +18,7 @@ import type {
   Flashcard,
   Roadmap,
   WorldEvent,
+  WorldState,
 } from "./types";
 import {
   useWorldStore,
@@ -107,6 +108,10 @@ export const worldApi: WorldApi = {
     store().endTour();
   },
 
+  syncFromWorldState: (state) => {
+    store().syncFromWorldState(state); // absolute rebuild — naturally idempotent
+  },
+
   showError: (message) => {
     // Soft amber, still unmistakably an error (AGENTS.md §2.5). The world
     // surfaces it as a banner; it never pretends all is well.
@@ -141,6 +146,13 @@ export interface WorldApi {
   startTour(roadmap: Roadmap): void;
   /** §5.3 `tour_end` — tour finished (or skipped); camera returns to overview. */
   endTour(): void;
+  /**
+   * Rebuild the 3D projection from a canonical WorldState (monitor ruling,
+   * session 020): worldBus calls this after a gap/reconnect refetch and on
+   * bootstrap, so the world can never drift from server truth (§2 fail-loudly).
+   * Absolute, not incremental — replays are no-ops.
+   */
+  syncFromWorldState(state: WorldState): void;
   /** §5.3 `error` — soft amber, still unmistakably an error (AGENTS.md §2.5). */
   showError(message: string): void;
 }

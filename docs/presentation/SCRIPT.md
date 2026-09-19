@@ -11,11 +11,11 @@
 | Time | On screen | You say |
 |---|---|---|
 | 0:00–0:10 | **S1** title | "This is enjoy — a calm ocean world that does the busywork of studying for you." |
-| 0:10–0:25 | **S2** problem | "Students don't drown in learning — they drown in the work around it. Planning, formatting cards, scheduling reviews. None of that is learning. It's overhead." |
-| 0:25–0:40 | **S3** the idea | "So: what if your study plan were a harbour? Tasks are boats. Reviews are a short sail. Finished decks rest at the lamp. No streaks, no guilt — the lamp only records victories. Let me show you." |
-| 0:40–1:05 | **S4 → GAMEPLAY A** | "One sentence becomes a plan." *(type live)* "The orchestrator routes it, the planner templates it, the world shows it." |
-| 1:05–1:30 | **S5 → GAMEPLAY B** | "Flashcards are a short sail — question, reveal, four grade boats. Real retrieval practice: the AI never answers for you, it just removes everything else." |
-| 1:30–1:45 | **S6 → GAMEPLAY C** | "And knowledge grows beneath the sea. Your portfolio isn't a chart — it's a place." |
+| 0:10–0:25 | **S2** problem 😰 | "Students are stressed out. Current edtech adds MORE burden. Time goes to the tools instead of learning — or a chatbot does the work and nothing is learned." |
+| 0:25–0:40 | **S3** what we offer ✅ | "Three things: AI agents that delete the boring tasks. Big tasks broken down — executive function, done for you. And psychology-backed calm — no dashboards, no red deadlines. Let me show you." |
+| 0:40–1:05 | **S4 → GAMEPLAY A** 💬 | "One sentence becomes a plan." *(type live)* "The orchestrator routes it, the planner templates it, the world shows it." |
+| 1:05–1:30 | **S5 → GAMEPLAY B** ⛵ | "Flashcards are a short sail — question, reveal, four grade boats. Real retrieval practice: the AI never answers for you, it just removes everything else." |
+| 1:30–1:45 | **S6 → GAMEPLAY C** 🪸 | "And knowledge grows beneath the sea. Your portfolio isn't a chart — it's a place." |
 | 1:45–1:55 | **S7** under the hood | "Agents do the plumbing, Postgres is the single truth, one event stream keeps the world honest — and the AI never studies for you." |
 | 1:55–2:00 | **S8** closing | "A returning student is welcomed, never billed for absence. Thank you." |
 

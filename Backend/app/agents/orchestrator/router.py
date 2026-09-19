@@ -108,11 +108,18 @@ def route_message(message: str) -> RouteDecision:
     words = _words(normalized)
 
     zones_hit: set[Zone] = set()
+    # Phrases first, masking each matched occurrence so its words cannot ALSO
+    # hit single-word keywords: "fat boat" IS the fishboat — the "boat" inside
+    # it must not pull in the small-boat zone (session 018 known gap).
+    unclaimed = normalized
     for zone, phrases in _ZONE_PHRASES.items():
-        if any(re.search(rf"\b{re.escape(p)}\b", normalized) for p in phrases):
-            zones_hit.add(zone)
+        for phrase in phrases:
+            pattern = rf"\b{re.escape(phrase)}\b"
+            if re.search(pattern, unclaimed):
+                zones_hit.add(zone)
+                unclaimed = re.sub(pattern, " ", unclaimed)
     for zone, keywords in _ZONE_KEYWORDS.items():
-        if words & keywords:
+        if _words(unclaimed) & keywords:
             zones_hit.add(zone)
 
     if len(zones_hit) == 1:

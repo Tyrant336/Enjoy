@@ -85,13 +85,10 @@ def test_zone_phrases_and_extra_keywords(message: str, zone: Zone) -> None:
     assert route_message(message) == RouteDecision(Route.DIRECT_ZONE, zone)
 
 
-@pytest.mark.xfail(
-    reason="KNOWN GAP (reported to monitor, session 018): 'fat boat' = the "
-    "fishboat (REQUIREMENTS §1) but the 'boat' small-boat keyword also hits, "
-    "so it routes BIG_TASK — Agent L to fix keyword/phrase precedence",
-    strict=True,
-)
 def test_fat_boat_is_the_fishboat() -> None:
+    # Was a KNOWN GAP (session 018, strict xfail): the 'boat' small-boat
+    # keyword collided with the fishboat phrase. Fixed by L (router phrase
+    # precedence); marker removed when the tripwire fired (session 022).
     assert route_message("fat boat") == RouteDecision(Route.DIRECT_ZONE, Zone.FISHBOAT)
 
 

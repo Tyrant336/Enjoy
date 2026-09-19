@@ -118,7 +118,9 @@ function FleetBoat({ entry, dockIndex }: { entry: BoatEntry; dockIndex: number }
     <group ref={outer}>
       <group ref={inner} scale={scale} onClick={open}>
         <primitive object={model} />
-        <primitive object={reflection} />
+        {/* Reviewing boat: no reflection — the onboard POV sits right on it
+            and the depthTest-free reflection would smear across the deck. */}
+        {status !== "reviewing" && <primitive object={reflection} />}
       </group>
       {status === "docked" && (
         <pointLight

@@ -89,8 +89,11 @@ export class WorldErrorBoundary extends Component<
 function SceneContent() {
   return (
     <>
-      {/* Fog IS the depth system (the locked local visual spec): distant
-          boats melt into the mist; full density long before the ocean rim. */}
+      {/* Fog covers the near-field props (boats/lamp). The OCEAN fogs itself
+          (its shader converges to MIST_COLOR with distance — Ocean.tsx), so
+          the 5000 u plane rim can never show. NOTE: scene fog on the ocean's
+          ShaderMaterial painted a bright rim at the waterline (fogColor not
+          refreshed → white) — that path is deliberately gone. */}
       <fog attach="fog" args={[MIST_COLOR, 80, 700]} />
       <SkyDome />
       <Ocean />

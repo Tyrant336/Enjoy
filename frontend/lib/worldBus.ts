@@ -11,9 +11,11 @@
  * - Processes events strictly in `seq` order; duplicate/older seqs are
  *   dropped (idempotent handlers); event `id`s are remembered so a
  *   re-delivered event is never applied twice.
- * - On a seq GAP or any reconnect: refetches `GET /api/world-state`, hands it
- *   to `onWorldState` (the FE rebuilds from it — state is rebuilt, events are
- *   not replayed), and resumes from `lastEventSeq`.
+ * - On a seq GAP or any reconnect: refetches `GET /api/world-state` and
+ *   rebuilds BOTH projections from it — the 3D world via
+ *   `worldApi.syncFromWorldState(state)` and the UI store via `onWorldState`
+ *   (state is rebuilt, events are not replayed), then resumes from
+ *   `lastEventSeq`.
  * - Connection loss is LOUD, never silent: `onConnectionChange(false)` fires
  *   (the "harbour mist" banner) and the bus keeps retrying with backoff.
  */
@@ -94,7 +96,7 @@ export class WorldBus {
     };
   }
 
-  /** GET /api/world-state → push to listener + resync the seq cursor. */
+  /** GET /api/world-state → rebuild BOTH projections from the same state. */
   private async refetchWorldState(): Promise<void> {
     const resp = await fetch(`${this.baseUrl}/api/world-state`, {
       headers: this.headers(),
@@ -104,6 +106,10 @@ export class WorldBus {
       throw new Error(`world-state refetch failed: HTTP ${resp.status}`);
     }
     const state = (await resp.json()) as WorldState;
+    // One rebuild path (§4.2): the 3D projection AND the UI store rebuild from
+    // the SAME WorldState — bootstrap, gap, and reconnect alike (contract
+    // amendment 09fcee9, session 020).
+    this.api.syncFromWorldState(state);
     this.listeners.onWorldState(state);
     this.lastSeq = state.lastEventSeq;
   }

@@ -11,7 +11,7 @@
  *    the camera glides onto the deck boat's stern (≥1500 ms eased approach),
  *    then holds a gentle bob with no forced rotation (motion-sickness safe).
  *  - tour runner (FR-5.3): applies each roadmap step (camera preset or dive),
- *    dwells, advances; skippable via the "Skip tour" control (WorldOverlays).
+ *    dwells, advances; skippable via Agent L's TourUI (ends store.tour).
  *
  * Also registers the anchor camera for screen-space anchors (anchors.ts).
  */
@@ -27,9 +27,6 @@ import { registerAnchorCamera } from "./anchors";
 import { useWorldStore, type WorldCameraPreset } from "./worldStore";
 import { MOTION } from "@/lib/theme";
 
-const vEye = new THREE.Vector3();
-const vLook = new THREE.Vector3();
-
 export default function CameraRig() {
   const controls = useRef<CameraControlsImpl>(null);
   const cameraRequest = useWorldStore((s) => s.cameraRequest);
@@ -40,7 +37,8 @@ export default function CameraRig() {
   const tour = useWorldStore((s) => s.tour);
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
-  // True while the POV approach is still converging (expo approach).
+  // True while the review POV owns the camera (controls disabled for input,
+  // but still the thing that writes the camera — see POV note below).
   const povActive = useRef(false);
 
   const flyTo = (preset: WorldCameraPreset, instant: boolean, durationMs: number = MOTION.cameraMs) => {
@@ -82,16 +80,37 @@ export default function CameraRig() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mode transition only
   }, [worldMode, diveDestination]);
 
-  // Review POV entry/exit: hand the camera between camera-controls and the
-  // manual POV approach (frame loop below).
+  // Review POV entry/exit (FR-2.5.1): the camera glides onto the deck boat's
+  // stern, looking over the bow. IMPORTANT: camera-controls' update() writes
+  // camera.position/lookAt EVERY frame even when disabled, so a manual lerp
+  // gets overwritten (the "stuck at overview distance" bug). One way: the POV
+  // pose goes THROUGH camera-controls (setLookAt tween ≥1500 ms, NFR-1);
+  // input stays disabled while reviewing. The boat holds position during
+  // review (Fleet freezes it), so a single static pose is exact.
   useEffect(() => {
     const c = controls.current;
     if (!c) return;
     if (reviewing) {
       c.enabled = false;
       povActive.current = true;
+      if (!hasBoatRuntime(reviewing.deckId)) {
+        // The fleet boat always registers its runtime before it can be opened;
+        // missing runtime here is a bug — fail loudly, don't frame a guess.
+        useWorldStore.getState().setWorldError("The deck boat drifted out of reach — review POV could not engage.");
+        return;
+      }
+      const rt = readBoatRuntime(reviewing.deckId);
+      // Stern-corner POV: pulled back and a touch to starboard so the boat's
+      // own mast doesn't block the card boat ahead (visual review).
+      const right = new THREE.Vector3(-rt.forward.z, 0, rt.forward.x);
+      const eye = rt.pos.clone().addScaledVector(rt.forward, -1.9).addScaledVector(right, 0.55);
+      const look = rt.pos.clone().addScaledVector(rt.forward, 7.5);
+      // ≈1.8–2.0 s eased approach (smoothDamp settles in ≈4×smoothTime).
+      c.smoothTime = reducedMotion ? 0 : 1.8 / 4;
+      void c.setLookAt(eye.x, 1.6, eye.z, look.x, 1.1, look.z, !reducedMotion);
     } else {
       povActive.current = false;
+      void c.setFocalOffset(0, 0, 0, false); // clear any residual POV bob
       // Sync camera-controls to wherever the POV left the camera BEFORE
       // re-enabling, otherwise it snaps back to its stale internal state.
       const dir = camera.getWorldDirection(new THREE.Vector3());
@@ -136,26 +155,15 @@ export default function CameraRig() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by tour step
   }, [tour?.roadmap.id, tour?.stepIndex, reducedMotion]);
 
-  useFrame(({ clock }, dt) => {
-    // Keep the anchor camera registration fresh without effect churn.
+  useFrame(({ clock }) => {
     if (!povActive.current || !reviewing) return;
-    if (!hasBoatRuntime(reviewing.deckId)) return;
-    const rt = readBoatRuntime(reviewing.deckId);
-
-    // First-person POV on the stern, looking over the bow (FR-2.5.1).
+    const c = controls.current;
+    if (!c) return;
+    // Gentle bob with no forced rotation (motion-sickness safe, §7.4).
+    // Focal offset rides camera-controls' own write path, so it never fights
+    // the pose tween.
     const bob = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 0.7) * 0.05;
-    vEye.copy(rt.pos).addScaledVector(rt.forward, -1.5);
-    vEye.y = 1.15 + bob;
-    vLook.copy(rt.pos).addScaledVector(rt.forward, 7.5);
-    vLook.y = 1.4;
-
-    if (reducedMotion) {
-      camera.position.copy(vEye); // §7.4: instant cut
-    } else {
-      const k = 1 - Math.pow(0.02, dt); // settles in ≈1.8–2.0 s (NFR-1 ≥1500 ms)
-      camera.position.lerp(vEye, k);
-    }
-    camera.lookAt(vLook);
+    void c.setFocalOffset(0, bob, 0, false);
   });
 
   return (

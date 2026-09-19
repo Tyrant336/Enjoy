@@ -26,7 +26,7 @@
 
 import { create } from "zustand";
 import type { CameraPreset } from "@/lib/types";
-import type { Deck, Flashcard, Roadmap } from "@/lib/types";
+import type { Deck, Flashcard, Roadmap, WorldState } from "@/lib/types";
 import { MOTION } from "@/lib/theme";
 import { SAIL_TINTS } from "./layout";
 
@@ -146,6 +146,9 @@ export type WorldStore = {
   sinkGradeBoat: () => void;
   riseBoat: (card: Flashcard) => void;
   exitReview: () => void;
+  /** §5.2: absolute projection rebuild from the canonical server WorldState
+   *  (worldBus bootstrap / gap-refetch). Idempotent by construction. */
+  syncFromWorldState: (state: WorldState) => void;
   setLampGlow: (level: number) => void;
   highlight: (target: string) => void;
   setNotice: (text: string | null) => void;
@@ -343,6 +346,83 @@ export const useWorldStore = create<WorldStore>((set, get) => {
       set({ reviewing: null, boats });
       // Camera return is owned by CameraRig's POV-exit branch (it syncs
       // camera-controls to the POV pose first to avoid a snap).
+    },
+
+    syncFromWorldState: (state) => {
+      // §5.2: the server WorldState is canonical. This rebuilds the world
+      // projection ABSOLUTELY — same state in → same projection out, so
+      // worldBus replays/refetches are harmless. Boundary validation is
+      // strict (§2.4): malformed canonical state is a contract bug — throw.
+      if (!state || !Array.isArray(state.decks)) {
+        throw new Error("syncFromWorldState: state.decks must be an array");
+      }
+      const prev = get();
+
+      const boats: Record<string, BoatEntry> = {};
+      state.decks.forEach((deck, i) => {
+        if (!deck.id || typeof deck.name !== "string") {
+          throw new Error(`syncFromWorldState: malformed deck at index ${i}`);
+        }
+        const existing = prev.boats[deck.id];
+        if (existing) {
+          // Preserve local presentation memory (anim nonce, leader flag,
+          // circle phase); only the canonical status is rebuilt.
+          boats[deck.id] = { ...existing, status: deck.boatState };
+          return;
+        }
+        const circlingSoFar = Object.values(boats).filter((b) => b.status === "circle");
+        const entry: BoatEntry = {
+          deckId: deck.id,
+          name: deck.name,
+          sailTint: sailTintFor(deck.id),
+          leader: deck.boatState === "circle" && circlingSoFar.length === 0,
+          status: deck.boatState,
+          baseAngle: (i * 2.2 + 0.6) % (Math.PI * 2),
+          animNonce: 1,
+        };
+        if (entry.leader) entry.sailTint = SAIL_TINTS.purple;
+        boats[deck.id] = entry;
+      });
+
+      let reviewing: ReviewState | null = null;
+      const r = state.reviewing;
+      if (r) {
+        if (!boats[r.deckId]) {
+          throw new Error(
+            `syncFromWorldState: reviewing deck '${r.deckId}' is not in decks`,
+          );
+        }
+        const cur = prev.reviewing;
+        const unchanged =
+          cur &&
+          cur.deckId === r.deckId &&
+          (cur.card?.id ?? null) === (r.currentCard?.id ?? null) &&
+          cur.answerRevealed === r.answerRevealed;
+        reviewing = unchanged
+          ? cur
+          : {
+              deckId: r.deckId,
+              card: r.currentCard,
+              answerRevealed: r.answerRevealed,
+              lastGrade: null,
+              sinkingGrade: null,
+              riseNonce: (cur?.riseNonce ?? 0) + 1,
+            };
+      }
+
+      const glow = Math.min(1, Math.max(0, state.lampGlowLevel));
+      if (state.user.labelsVisible !== prev.labelsVisible && typeof window !== "undefined") {
+        window.localStorage.setItem(LABELS_STORAGE_KEY, state.user.labelsVisible ? "1" : "0");
+      }
+
+      set({
+        boats,
+        reviewing,
+        lampGlow: glow, // absolute level; a rebuild is not a victory pulse
+        labelsVisible: state.user.labelsVisible,
+        reducedMotion: state.user.reducedMotion,
+        tourOfferId: state.pendingTour?.roadmapId ?? null,
+      });
     },
 
     setLampGlow: (level) => {

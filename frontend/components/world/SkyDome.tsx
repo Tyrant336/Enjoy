@@ -35,11 +35,13 @@ const FRAG = /* glsl */ `
     float h = normalize(vDir).y;
     vec3 col = mix(uHorizon, uMid, smoothstep(0.015, 0.20, h));
     col = mix(col, uTop, smoothstep(0.18, 0.65, h));
-    // Subtle warm haze ABOVE the waterline — never a bright seam on it.
-    float band = smoothstep(0.16, 0.03, h) * smoothstep(-0.02, 0.03, h);
-    col = mix(col, uMist, band * 0.30);
-    // Below the horizon: solid mist color (meets the fogged water exactly).
-    col = mix(uHorizon, col, smoothstep(-0.02, 0.012, h));
+    // Warm haze floats WELL above the waterline (peaks h≈0.13, gone by
+    // h≈0.05) — a bright band AT the waterline was the rejected endline.
+    float band = smoothstep(0.26, 0.13, h) * smoothstep(0.05, 0.13, h);
+    col = mix(col, uMist, band * 0.18);
+    // Convergence: at/below the horizon the sky is EXACTLY the shared mist
+    // color and eases out of it — zero luminance step at the waterline.
+    col = mix(uHorizon, col, smoothstep(-0.01, 0.055, h));
     // Dither to kill 8-bit gradient banding in the soft sky.
     float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
     col += (n - 0.5) * (1.5 / 255.0);

@@ -18,7 +18,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from httpx import AsyncClient
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models as m
@@ -250,6 +250,70 @@ async def test_step4_deck_completion_docks_records_glows(
     assert (await _outbox_types(db_session, uid))[-3:] == [
         "sink_boat", "dock_at_lamp", "lamp_glow",
     ]
+
+
+# ── Phase 3 gate — refresh DURING review: world-state alone rebuilds the ────
+# session (backend half; the browser half lives in docs/PHASE3-E2E-CHECKLIST.md).
+# This is exactly the payload worldApi.syncFromWorldState consumes (session 020).
+
+
+async def test_refresh_mid_review_world_state_rebuilds_session(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    uid = f"e2e-refresh-{uuid.uuid4().hex[:8]}"
+    deck_id = f"e2e-deck-{uuid.uuid4().hex[:8]}"
+    c1, c2, _c3 = await _seed_review_deck(client, db_session, uid, deck_id)
+    headers = {"X-Harbour-User-Id": uid}
+
+    start = await client.post(
+        "/agents/flashcards/review/start", json={"deckId": deck_id}, headers=headers
+    )
+    assert start.status_code == 200
+    grade = await client.post(
+        "/agents/flashcards/review/grade",
+        json={"cardId": c1, "rating": "good"}, headers=headers,
+    )
+    assert grade.status_code == 200  # mid-review: 1 graded, 2 remaining
+
+    # A FRESH client (browser refresh = no SSE history) re-fetches world-state.
+    resp = await client.get("/api/world-state", headers=headers)
+    assert resp.status_code == 200
+    # Strict contract parse — the exact object syncFromWorldState validates (§2.4).
+    state = WorldState.model_validate(resp.json())
+
+    # reviewing carries deck + card position: the graded card is NOT reshown
+    # (FR-2.9); the session resumes on the next ungraded card.
+    assert state.reviewing is not None, "refresh mid-review must keep the POV"
+    assert state.reviewing.deck_id == deck_id
+    assert state.reviewing.current_card is not None
+    assert state.reviewing.current_card.id == c2, "resume position = next ungraded"
+    assert state.reviewing.answer_revealed is False
+
+    # The deck row agrees the boat is in review POV (world projection anchor).
+    decks = {d.id: d for d in state.decks}
+    assert decks[deck_id].boat_state == "reviewing"
+
+    # lastEventSeq is the SSE gap anchor: it must equal the outbox high-water
+    # mark so a reconnected bus can prove it missed nothing (§5.2).
+    max_seq = (
+        await db_session.execute(
+            select(func.coalesce(func.max(m.EventOutbox.seq), 0)).where(
+                m.EventOutbox.user_id == uid
+            )
+        )
+    ).scalar_one()
+    assert state.last_event_seq == max_seq
+    assert state.last_event_seq > 0, "review events were emitted before refresh"
+
+    # Sufficiency, proven: the rebuilt position drives a real resume — a fresh
+    # review/start returns exactly the card world-state said was current.
+    resumed = await client.post(
+        "/agents/flashcards/review/start", json={"deckId": deck_id}, headers=headers
+    )
+    assert resumed.status_code == 200
+    assert resumed.json()["card"]["id"] == state.reviewing.current_card.id
+    progress = resumed.json()["progress"]
+    assert (progress["graded"], progress["remaining"]) == (1, 2)
 
 
 # ── §8.5 — atlas serves the seeded graph (rendering is Agent T's half) ──────

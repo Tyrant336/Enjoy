@@ -80,6 +80,10 @@ export default function LabPage() {
   const setReducedMotion = useWorldStore((s) => s.setReducedMotion);
   const requestCamera = useWorldStore((s) => s.requestCamera);
   const dive = useWorldStore((s) => s.dive);
+  const tourOfferId = useWorldStore((s) => s.tourOfferId);
+  const worldError = useWorldStore((s) => s.worldError);
+  const setWorldError = useWorldStore((s) => s.setWorldError);
+  const tour = useWorldStore((s) => s.tour);
 
   // Seed the fleet through the real worldApi (idempotent — safe under
   // StrictMode double effects) and register the lab's mock host handlers.
@@ -128,8 +132,6 @@ export default function LabPage() {
         worldApi.exitReviewPOV();
         store().setNotice("Progress is kept — 'Thermo 1' waits for you.");
       },
-      onAcceptTour: () => worldApi.startTour(DEMO_ROADMAP),
-      onDismissTour: () => store().endTour(),
     });
   }, []);
 
@@ -151,6 +153,39 @@ export default function LabPage() {
       <HarbourCanvas />
       <AtlasLayer />
       <DiveOverlay />
+
+      {/* Lab scratch surfaces for state whose product chrome lives in L's
+          TourUI/Banners (one path, §3) — sandbox only, deleted with the lab. */}
+      {worldError && (
+        <div style={{ position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 33 }}>
+          <div style={{ ...pillBtn, border: `2px solid ${PALETTE.softAmber.hex}`, cursor: "default", display: "flex", gap: 12, alignItems: "center" }}>
+            <span>{worldError}</span>
+            <button type="button" style={{ ...pillBtn, padding: "2px 10px" }} onClick={() => setWorldError(null)}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      {tourOfferId && !tour && (
+        <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 33 }}>
+          <div style={{ ...pillBtn, display: "flex", gap: 10, alignItems: "center", cursor: "default" }}>
+            <span>Would you like a short harbour tour?</span>
+            <button type="button" style={{ ...pillBtn, padding: "4px 12px" }} onClick={() => worldApi.startTour(DEMO_ROADMAP)}>
+              Begin tour
+            </button>
+            <button type="button" style={{ ...pillBtn, padding: "4px 12px", opacity: 0.7 }} onClick={() => worldApi.endTour()}>
+              Not now
+            </button>
+          </div>
+        </div>
+      )}
+      {tour && (
+        <div style={{ position: "absolute", bottom: 76, left: "50%", transform: "translateX(-50%)", zIndex: 33 }}>
+          <button type="button" style={pillBtn} onClick={() => worldApi.endTour()}>
+            Skip tour (lab)
+          </button>
+        </div>
+      )}
 
       {/* Toggle control (LABELS.md FR-L1.2.1) — always visible. */}
       <div style={{ position: "absolute", top: 16, right: 16, display: "flex", gap: 8, zIndex: 30 }}>

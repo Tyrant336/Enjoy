@@ -98,11 +98,11 @@ export function addOutlines(root: THREE.Object3D, thickness: number): void {
 }
 
 const REFLECT_VERT = /* glsl */ `
-  varying float vWorldY;
+  varying vec3 vWorld;
   #include <fog_pars_vertex>
   void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
-    vWorldY = world.y;
+    vWorld = world.xyz;
     vec4 mvPosition = viewMatrix * world;
     gl_Position = projectionMatrix * mvPosition;
     #include <fog_vertex>
@@ -113,15 +113,19 @@ const REFLECT_FRAG = /* glsl */ `
   uniform vec3 uWater;
   uniform float uOpacity;
   uniform float uFadeDepth;
-  varying float vWorldY;
+  varying vec3 vWorld;
   #include <fog_pars_fragment>
   void main() {
     // Strong at the waterline, dissolving within ~1 object-height below it;
     // color dragged toward the deep-water hue with depth (the locked local
     // visual spec: reflections are prominent, water-tinted, fading).
-    float keep = smoothstep(-uFadeDepth, -0.15, vWorldY);
-    vec3 col = mix(uWater, uColor, smoothstep(-uFadeDepth * 0.7, 0.0, vWorldY));
-    gl_FragColor = vec4(col, uOpacity * keep);
+    float keep = smoothstep(-uFadeDepth, -0.15, vWorld.y);
+    vec3 col = mix(uWater, uColor, smoothstep(-uFadeDepth * 0.7, 0.0, vWorld.y));
+    // Mirror physics: reflections exist at grazing sight-lines only. This
+    // also keeps the mirrored clone from smudging the water in the §2.6
+    // top-down anchor view.
+    float graze = 1.0 - clamp(abs(normalize(vWorld - cameraPosition).y), 0.0, 1.0);
+    gl_FragColor = vec4(col, uOpacity * keep * pow(graze, 1.5));
     #include <fog_fragment>
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -179,6 +183,12 @@ export function makeReflection(
         fragmentShader: REFLECT_FRAG,
         transparent: true,
         depthWrite: false,
+        // The mirrored clone hangs BELOW the opaque ocean surface, whose depth
+        // buffer entry would cull every fragment — reflections must skip the
+        // depth test or they are never seen (visual-review rejection fix).
+        // Occlusion cost: a nearer boat's hull won't cull a far reflection;
+        // hulls barely dip below the waterline, so this stays invisible.
+        depthTest: false,
         side: THREE.DoubleSide,
         fog: true,
       });

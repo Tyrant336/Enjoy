@@ -253,6 +253,12 @@ export const useWorldStore = create<WorldStore>((set, get) => {
       const b = get().boats[deckId];
       if (!b) throw new Error(`dockAtLamp: unknown deck '${deckId}'`);
       if (b.status === "docked" || b.status === "docking") return; // idempotent
+      // FR-2.6 completion: docking the deck under review ENDS the review.
+      // §5.3's final grade sequence (sink_boat → dock_at_lamp → lamp_glow)
+      // carries no exit_review_pov, so the world leaves the POV here — the
+      // same reviewing:null path as exitReview (one path; CameraRig's
+      // POV-exit branch owns the camera return).
+      if (get().reviewing?.deckId === deckId) set({ reviewing: null });
       set({
         boats: { ...get().boats, [deckId]: { ...b, status: "docking", animNonce: b.animNonce + 1 } },
       });

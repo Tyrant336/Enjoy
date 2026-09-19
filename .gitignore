@@ -1,0 +1,56 @@
+# Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.vercel
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Blender backups
+*.blend1
+
+# ── Local-only files (owner decision, session 011) ──
+# Private design references and the product requirements doc — present on the
+# dev machine, never committed.
+Background/
+Idea/
+docs/REQUIREMENTS.md
+
+# ── opensource/ cloned repos (re-fetchable via opensource/download.sh) ──
+# Keep our own files: README.md, download.sh, distill/ specs, 06-assets-cc0,
+# 07-underwater-atlas source. Ignore the cloned repo contents:
+opensource/01-scheduler-fishboat/*
+!opensource/01-scheduler-fishboat/distill/
+opensource/02-anki-smallboats/*
+!opensource/02-anki-smallboats/distill/
+opensource/03-knowledge-graph/*
+!opensource/03-knowledge-graph/distill/
+opensource/04-orchestrator/*
+!opensource/04-orchestrator/distill/
+opensource/05-frontend-world/*
+!opensource/05-frontend-world/distill/
+# atlas zip (already extracted to 07) + its build output
+opensource/*.zip
+opensource/07-underwater-atlas/app/dist/
+opensource/07-underwater-atlas/app/node_modules/
+
+.labshots/

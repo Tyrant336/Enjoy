@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anki Abyss</title>
+<style>
+/* The React mount point must not add a box of its own: a wrapper
+   <div id="root"> that generates a box would break the height:100% reference
+   chain from html to body to #app, and the viewport-filling three-column
+   layout would collapse to content height. display:contents lets the mount
+   point generate no box, keeping the exact parent-child geometry. */
+#root{display:contents}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

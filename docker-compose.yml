@@ -1,0 +1,24 @@
+# enjoy — local development infrastructure
+# Only PostgreSQL runs in Docker. Backend (uvicorn) and frontend (next dev)
+# run natively for hot-reload speed. See docs/BUILDING.md §1.5.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: enjoy-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres       # local demo only — matches .env.example
+      POSTGRES_DB: harbour
+    ports:
+      - "5433:5432"
+    volumes:
+      - enjoy-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d harbour"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  enjoy-pgdata:

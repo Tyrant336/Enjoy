@@ -1,0 +1,199 @@
+/* Anki Abyss — a knowledge reef in bright beach water.
+   One theme only: "lagoon". Frosted pale-aqua chrome floats over the
+   water; exactly one teal accent is spent on active states and the primary
+   action. Hairlines, never drop shadows; every numeral mono and tabular. */
+
+:root{
+  --r:6px; --r-sm:4px; --r-lg:10px;
+}
+:root[data-theme="lagoon"]{
+  --bg:#cdeef3;
+  --panel:rgba(233,249,251,.74);
+  --raised:rgba(255,255,255,.55);
+  --ink:#0b3d49;
+  --muted:#38636f;
+  --faint:#6f98a3;
+  --line:rgba(158,214,224,.75);
+  --line-soft:rgba(255,255,255,.5);
+  --accent:#0e8f8a;
+  --accent-ink:#f2feff;
+  --accent-soft:rgba(14,143,138,.12);
+  --halo:rgba(255,255,255,.9);
+}
+html,body{height:100%;overflow:hidden}
+body{
+  background:linear-gradient(180deg,#8fe0ee 0%,#35b6c8 55%,#12708e 100%);
+  color:var(--ink);font-size:13px;-webkit-font-smoothing:antialiased;
+}
+
+/* ── Layout: sidebar / stage / right drawer — three columns, one screen ──── */
+#app{display:grid;grid-template-columns:272px 1fr 0;height:100vh;transition:grid-template-columns .34s var(--ease)}
+#app.open{grid-template-columns:272px 1fr 330px}
+@media (max-width:1180px){ #app{grid-template-columns:230px 1fr 0} #app.open{grid-template-columns:230px 1fr 300px} }
+
+aside{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
+  background:var(--panel);backdrop-filter:blur(16px) saturate(1.25)}
+#stage{position:relative;overflow:hidden}
+#drawer{border-left:1px solid var(--line);overflow:hidden;min-width:0;
+  background:var(--panel);backdrop-filter:blur(16px) saturate(1.25)}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+.brand{padding:18px 18px 14px;border-bottom:1px solid var(--line-soft)}
+.brand h1{font-size:15px;font-weight:560;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand h1 .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 10px var(--accent);flex:none}
+.brand p{font-size:11.5px;color:var(--faint);margin-top:6px;line-height:1.6}
+
+/* PDF import + Anki export */
+.pdfzone{padding:12px 14px;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:8px}
+.pdfbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  font:inherit;font-size:12.5px;font-weight:550;color:var(--accent);
+  background:var(--accent-soft);border:1.5px dashed color-mix(in srgb,var(--accent) 55%,transparent);
+  border-radius:var(--r);padding:9px 10px;cursor:pointer;transition:all var(--fast)}
+.pdfbtn svg{width:16px;height:16px;flex:none}
+.pdfbtn:hover:not(:disabled){background:color-mix(in srgb,var(--accent) 18%,transparent);border-color:var(--accent)}
+.pdfbtn:disabled{opacity:.6;cursor:default}
+
+.pipe{border:1px solid var(--line);border-radius:var(--r);background:var(--raised);padding:9px 11px}
+.pipe-file{font-family:var(--mono);font-size:10.5px;color:var(--faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:7px}
+.ps{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--faint);padding:2.5px 0;transition:color var(--fast)}
+.ps i{width:7px;height:7px;border-radius:50%;flex:none;background:var(--line);transition:all var(--fast)}
+.ps.run{color:var(--ink)}
+.ps.run i{background:var(--accent);box-shadow:0 0 8px var(--accent);animation:kit-pulse 1.1s var(--ease) infinite}
+.ps.done{color:var(--muted)}
+.ps.done i{background:var(--accent);box-shadow:none}
+
+.ankibtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  font:inherit;font-size:12px;font-weight:550;color:var(--muted);
+  background:var(--raised);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:7px 10px;cursor:pointer;transition:all var(--fast)}
+.ankibtn svg{width:11px;height:11px;transition:transform var(--fast)}
+.ankibtn:hover,.ankibtn.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.ankipanel{border:1px solid var(--line);border-radius:var(--r);background:var(--raised);overflow:hidden}
+.ankipanel pre{display:block;max-height:220px;overflow:auto;padding:10px 11px;
+  font-family:var(--mono);font-size:10px;line-height:1.65;color:var(--muted);
+  white-space:pre;user-select:text}
+.ankiact{display:flex;gap:7px;padding:8px 10px;border-top:1px solid var(--line-soft)}
+.ankiact .btn{flex:1;font-size:11.5px;padding:5px 8px;background:var(--panel);border-color:var(--line)}
+.ankiact .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.searchbox{padding:12px 14px 10px;position:relative}
+.searchbox input{width:100%;background:var(--raised);border-color:var(--line);
+  padding:7px 9px 7px 27px;font-size:12.5px;border-radius:var(--r-sm);color:var(--ink)}
+.searchbox input::placeholder{color:var(--faint)}
+.searchbox svg{position:absolute;left:23px;top:50%;transform:translateY(-50%);
+  width:12px;height:12px;color:var(--faint);pointer-events:none}
+
+.legend{padding:2px 14px 12px;display:flex;flex-wrap:wrap;gap:4px}
+.cl{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);
+  background:none;border:1px solid transparent;border-radius:99px;padding:2.5px 8px 2.5px 6px;
+  cursor:pointer;transition:all var(--fast);font-family:inherit}
+.cl:hover{background:var(--raised)}
+.cl i{width:7px;height:7px;border-radius:50%;flex:none;transition:opacity var(--fast)}
+.cl.off{color:var(--faint)} .cl.off i{opacity:.22}
+.cl b{font-family:var(--mono);font-size:10px;font-weight:400;color:var(--faint)}
+
+.listwrap{flex:1;min-height:0;overflow:auto;border-top:1px solid var(--line-soft);padding:6px 0 10px}
+.lrow{display:flex;align-items:center;gap:8px;padding:5.5px 16px;cursor:pointer;
+  border-left:2px solid transparent;transition:background var(--fast)}
+.lrow:hover{background:var(--raised)}
+.lrow.on{background:var(--raised);border-left-color:var(--accent)}
+.lrow i{width:6px;height:6px;border-radius:50%;flex:none}
+.lrow span{flex:1;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow b{font-family:var(--mono);font-size:10px;font-weight:400;color:var(--faint)}
+.lrow mark{background:none;color:var(--accent)}
+
+.foot{border-top:1px solid var(--line-soft);padding:10px 16px 12px;
+  display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.foot .k{font-family:var(--mono);font-size:14px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.foot .l{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);margin-top:1px}
+
+/* ── Overlays on the stage ─────────────────────────────────────────────── */
+/* The canvas is appended by JS, so in DOM order it lands after every overlay.
+   Without an explicit z-index it would cover the labels, toolbar and
+   readouts — the page would look like "3D works, but the UI is gone". */
+canvas{display:block;position:absolute;inset:0;width:100%;height:100%;z-index:0}
+#labels,#hud,#tools,#hint,#pathbar{z-index:3}
+#gate{z-index:6}
+#labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.lab{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;
+  font-size:11px;letter-spacing:.01em;color:var(--ink);
+  text-shadow:0 0 4px var(--halo),0 0 9px var(--halo),0 1px 2px var(--halo);
+  padding-top:0;will-change:transform,opacity}
+.lab.sm{font-size:10px;color:var(--muted)}
+
+#hud{position:absolute;right:14px;top:12px;text-align:right;pointer-events:none;
+  font-family:var(--mono);font-size:10px;color:var(--faint);line-height:1.75;letter-spacing:.04em}
+#hud b{color:var(--muted);font-weight:400}
+
+/* width:max-content is the key here. An absolutely positioned element's
+   available width is "containing-block width − left", and left is 50%, so
+   without an explicit width it shrinks to half the screen — wrapping even
+   though the other half is still free. */
+#tools{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);
+  display:flex;align-items:center;gap:6px;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--line);border-radius:99px;padding:5px 7px;backdrop-filter:blur(10px);
+  width:max-content;max-width:calc(100% - 28px);flex-wrap:wrap;justify-content:center}
+#tools .sep{width:1px;height:16px;background:var(--line);margin:0 2px}
+#zlvl{min-width:44px;letter-spacing:0}
+.tb{font:500 11px var(--mono);letter-spacing:.05em;color:var(--muted);background:none;border:0;
+  border-radius:99px;padding:5px 10px;cursor:pointer;transition:all var(--fast);white-space:nowrap}
+.tb:hover{color:var(--ink);background:var(--raised)}
+.tb.on{color:var(--accent-ink);background:var(--accent)}
+
+#hint{position:absolute;left:16px;bottom:16px;font-family:var(--mono);font-size:10px;
+  color:var(--muted);line-height:1.8;pointer-events:none;letter-spacing:.03em;
+  text-shadow:0 0 5px var(--halo)}
+#hint kbd{color:var(--ink);font:inherit}
+
+#pathbar{position:absolute;left:50%;top:14px;transform:translateX(-50%);
+  display:none;align-items:center;gap:8px;max-width:min(70%,760px);
+  background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--accent);
+  border-radius:99px;padding:6px 8px 6px 13px;backdrop-filter:blur(10px);
+  font-size:11.5px;overflow:hidden}
+#pathbar.on{display:flex}
+#pathbar .chain{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+#pathbar .chain em{font-style:normal;color:var(--faint);margin:0 5px}
+#pathbar .x{font:inherit;color:var(--faint);background:none;border:0;cursor:pointer;padding:0 4px}
+#pathbar .x:hover{color:var(--ink)}
+
+/* ── Right drawer ─────────────────────────────────────────────────────── */
+/* The grid column owns the width. Hard-coding it would let the media
+   query shrink the column while #drawer's overflow:hidden slices content. */
+.dr{width:100%;height:100%;display:flex;flex-direction:column;min-height:0}
+.dr-head{padding:18px 18px 14px;border-bottom:1px solid var(--line-soft)}
+.dr-head .kind{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.dr-head .kind i{width:7px;height:7px;border-radius:50%}
+.dr-head h2{font-size:17px;font-weight:560;letter-spacing:-.02em;margin-top:9px}
+.dr-head p{font-size:12.5px;line-height:1.75;color:var(--muted);margin-top:9px}
+.dr-body{flex:1;min-height:0;overflow:auto;padding:4px 18px 18px}
+.dr-sec{margin-top:18px}
+.dr-sec h3{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--faint);font-weight:400;margin-bottom:7px;display:flex;gap:6px;align-items:baseline}
+.dr-sec h3 b{font-weight:400;color:var(--faint);opacity:.6}
+.nb{display:flex;align-items:center;gap:7px;padding:5px 7px;margin:0 -7px;border-radius:var(--r-sm);
+  cursor:pointer;transition:background var(--fast)}
+.nb:hover{background:var(--raised)}
+.nb i{width:6px;height:6px;border-radius:50%;flex:none}
+.nb span{font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nb u{font-family:var(--mono);font-size:9.5px;color:var(--faint);text-decoration:none;letter-spacing:.05em}
+.dr-act{display:flex;gap:7px;padding:12px 18px;border-top:1px solid var(--line-soft)}
+.dr-act .btn{flex:1;background:var(--raised);border-color:var(--line);font-size:11.5px;padding:6px 8px;color:var(--ink)}
+.dr-act .btn:hover{border-color:var(--faint);background:var(--raised)}
+.dr-act .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+/* Flashcard in the drawer */
+.fcard{margin-top:16px;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--raised);overflow:hidden}
+.fcard h3{font-family:var(--mono);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--accent);font-weight:500;padding:9px 12px 0}
+.fc-q,.fc-a{display:flex;gap:9px;padding:9px 12px;font-size:12.5px;line-height:1.65}
+.fc-q{color:var(--ink);font-weight:520}
+.fc-a{color:var(--muted);border-top:1px dashed var(--line)}
+.fc-q u,.fc-a u{font-family:var(--mono);font-size:9.5px;text-decoration:none;letter-spacing:.08em;
+  color:var(--accent);flex:none;padding-top:3px}
+
+#gate{position:absolute;inset:0;display:none;place-content:center;text-align:center;
+  background:var(--bg);color:var(--muted);font-size:13px;line-height:2;padding:40px}

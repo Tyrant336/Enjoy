@@ -1,0 +1,75 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2313 >>
+stream
+BT /F1 11 Tf 56 760 Td 15 TL
+(Photosynthesis and Cellular Respiration - Study Notes) Tj T*
+(Biology 101, Week 4. Key definitions, formulas and processes.) Tj T*
+() Tj T*
+(1. Core Definitions) Tj T*
+(Photosynthesis: the process by which green plants, algae and some) Tj T*
+(bacteria convert light energy into chemical energy stored in glucose.) Tj T*
+(Chlorophyll: the green pigment in chloroplasts that absorbs light,) Tj T*
+(mainly in the blue and red wavelengths; reflects green.) Tj T*
+(Stomata: pores on the leaf underside that regulate gas exchange.) Tj T*
+(ATP \(adenosine triphosphate\): the cell's main energy currency.) Tj T*
+(NADPH: electron carrier produced in the light reactions.) Tj T*
+(Calvin cycle: the light-independent reactions that fix CO2 into sugar.) Tj T*
+() Tj T*
+(2. The Master Equation) Tj T*
+(6 CO2 + 6 H2O + light energy -> C6H12O6 + 6 O2) Tj T*
+(Carbon dioxide + water, powered by light, yield glucose and oxygen.) Tj T*
+() Tj T*
+(3. Two Stages of Photosynthesis) Tj T*
+(Stage A - Light reactions \(thylakoid membranes\):) Tj T*
+(  - Light splits water \(photolysis\), releasing O2.) Tj T*
+(  - Electron transport chain builds ATP and NADPH.) Tj T*
+(Stage B - Calvin cycle \(stroma\):) Tj T*
+(  - Carbon fixation: RuBisCO attaches CO2 to RuBP.) Tj T*
+(  - Reduction: ATP and NADPH convert 3-PGA into G3P.) Tj T*
+(  - Regeneration: RuBP is rebuilt so the cycle can continue.) Tj T*
+() Tj T*
+(4. Cellular Respiration - the mirror process) Tj T*
+(C6H12O6 + 6 O2 -> 6 CO2 + 6 H2O + ATP \(about 30-32 ATP per glucose\)) Tj T*
+(Glycolysis \(cytoplasm\) -> Krebs cycle \(mitochondrial matrix\) ->) Tj T*
+(oxidative phosphorylation \(inner mitochondrial membrane\).) Tj T*
+() Tj T*
+(5. Frequently Confused Pairs) Tj T*
+(Chlorophyll vs chloroplast: pigment vs organelle.) Tj T*
+(Light reactions vs Calvin cycle: energy capture vs carbon fixation.) Tj T*
+(Aerobic vs anaerobic respiration: with vs without oxygen.) Tj T*
+() Tj T*
+(6. Practice Questions) Tj T*
+(Q1. Where exactly does the Calvin cycle take place?) Tj T*
+(Q2. Which molecule is both a reactant of respiration and a product) Tj T*
+(of photosynthesis? \(Hint: there are two correct answers.\)) Tj T*
+(Q3. Explain why the light reactions stop within seconds in the dark) Tj T*
+(while the Calvin cycle can continue briefly.) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000002606 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2676
+%%EOF

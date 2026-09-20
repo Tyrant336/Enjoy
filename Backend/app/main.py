@@ -6,7 +6,9 @@ seeded-data read endpoints + SSE outbox stream (app/api/, app/services/).
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
+from app.agents.flashcards.apkg import STATIC_DECKS_DIR
 from app.api import agents, chat, world
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
@@ -29,6 +31,14 @@ def create_app() -> FastAPI:
     app.include_router(world.router)
     app.include_router(agents.router)
     app.include_router(chat.router)
+
+    # Generated .apkg exports (FR-2.3) are served as static files.
+    STATIC_DECKS_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount(
+        "/static",
+        StaticFiles(directory=STATIC_DECKS_DIR.parent),
+        name="static",
+    )
 
     @app.get("/health")
     async def health() -> dict[str, object]:

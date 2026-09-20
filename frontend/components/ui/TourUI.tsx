@@ -14,21 +14,10 @@
  * Driven by uiStore (fed by the worldBus listeners / world-state rebuilds).
  */
 
-import { LABEL } from "@/lib/theme";
+import { CHROME, PALETTE } from "@/lib/theme";
+import ChromeButton from "./ChromeButton";
 import { dismissTour, replayTour, startTour } from "./actions";
 import { useUiStore } from "./uiStore";
-
-const pill: React.CSSProperties = {
-  background: LABEL.fill,
-  color: LABEL.text,
-  boxShadow: LABEL.shadow,
-  border: "none",
-  borderRadius: 999,
-  padding: "8px 16px",
-  fontSize: 13,
-  fontWeight: 550,
-  cursor: "pointer",
-};
 
 export default function TourUI() {
   const tourOfferId = useUiStore((s) => s.tourOfferId);
@@ -43,26 +32,18 @@ export default function TourUI() {
           <div
             className="flex items-center gap-2.5 rounded-full px-4 py-2 text-sm"
             style={{
-              background: LABEL.fill,
-              color: LABEL.text,
-              boxShadow: LABEL.shadow,
+              background: PALETTE.chromeCream.hex,
+              color: PALETTE.chromeInk.hex,
+              boxShadow: CHROME.shadowCard,
             }}
           >
             <span>Would you like a short harbour tour?</span>
-            <button
-              type="button"
-              style={{ ...pill, padding: "4px 12px" }}
-              onClick={() => void startTour(tourOfferId)}
-            >
+            <ChromeButton onClick={() => void startTour(tourOfferId)}>
               Begin tour
-            </button>
-            <button
-              type="button"
-              style={{ ...pill, padding: "4px 12px", opacity: 0.7 }}
-              onClick={() => void dismissTour(tourOfferId)}
-            >
+            </ChromeButton>
+            <ChromeButton dimmed onClick={() => void dismissTour(tourOfferId)}>
               Not now
-            </button>
+            </ChromeButton>
           </div>
         </div>
       )}
@@ -70,35 +51,24 @@ export default function TourUI() {
       {/* §7.4: Skip is visible during any automated camera movement. */}
       {tourActive && lastRoadmapId && (
         <div className="fixed bottom-7 right-6 z-40">
-          <button
-            type="button"
-            style={pill}
-            onClick={() => void dismissTour(lastRoadmapId)}
-          >
+          <ChromeButton onClick={() => void dismissTour(lastRoadmapId)}>
             Skip tour
-          </button>
+          </ChromeButton>
         </div>
       )}
 
-      {/* FR-5.3: the "?" replays the most recent tour, always available. */}
+      {/* FR-5.3: the "?" replays the most recent tour, always available.
+          Top-left — the top-right corner belongs to ViewPanel (one path). */}
       {lastRoadmapId && !tourActive && (
-        <div className="fixed right-6 top-4 z-40">
-          <button
-            type="button"
+        <div className="fixed left-3 top-3 z-40">
+          <ChromeButton
             aria-label="Replay the harbour tour"
             title="Replay the harbour tour"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
-            style={{
-              background: LABEL.fill,
-              color: LABEL.text,
-              boxShadow: LABEL.shadow,
-              border: "none",
-              cursor: "pointer",
-            }}
+            style={{ borderRadius: CHROME.radiusPill, padding: "8px 14px", fontWeight: 700 }}
             onClick={() => void replayTour(lastRoadmapId)}
           >
             ?
-          </button>
+          </ChromeButton>
         </div>
       )}
     </>

@@ -1,0 +1,91 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R 5 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2329 >>
+stream
+BT /F1 11 Tf 56 760 Td 15 TL
+(Neural Networks Basics - Lecture Notes) Tj T*
+(CS 229 Intro to ML. Concepts, formulas, training process.) Tj T*
+() Tj T*
+(1. The Perceptron) Tj T*
+(A perceptron computes y = f\(w . x + b\): a weighted sum of inputs x) Tj T*
+(with weights w and bias b, passed through activation function f.) Tj T*
+(It is a linear classifier; the decision boundary is a hyperplane.) Tj T*
+() Tj T*
+(2. Activation Functions) Tj T*
+(Sigmoid: s\(z\) = 1 / \(1 + e^-z\). Outputs in \(0,1\); saturates and) Tj T*
+(causes vanishing gradients in deep nets.) Tj T*
+(ReLU: f\(z\) = max\(0, z\). Cheap, sparse, the modern default; can) Tj T*
+(suffer from 'dying ReLU' units.) Tj T*
+(Tanh: outputs in \(-1,1\); zero-centred, still saturates.) Tj T*
+(Softmax: converts logits into a probability distribution over) Tj T*
+(classes; used in the output layer for classification.) Tj T*
+() Tj T*
+(3. Loss Functions) Tj T*
+(Mean squared error: L = \(1/n\) * sum\(\(y_pred - y_true\)^2\).) Tj T*
+(Cross-entropy loss for classification: L = -sum\(y * log\(p\)\).) Tj T*
+(The loss measures how wrong the network is; training minimises it.) Tj T*
+() Tj T*
+(4. Gradient Descent and Backpropagation) Tj T*
+(Update rule: w <- w - lr * dL/dw, where lr is the learning rate.) Tj T*
+(Backpropagation applies the chain rule to propagate the loss) Tj T*
+(gradient from the output layer back to every weight.) Tj T*
+(Variants: stochastic gradient descent \(SGD\), mini-batch GD, Adam.) Tj T*
+(Learning rate too high -> divergence; too low -> slow convergence.) Tj T*
+() Tj T*
+(5. Training Process \(standard pipeline\)) Tj T*
+(Step 1: initialise weights randomly \(small values, symmetry break\).) Tj T*
+(Step 2: forward pass - compute predictions for a batch.) Tj T*
+(Step 3: compute the loss against the true labels.) Tj T*
+(Step 4: backward pass - backpropagate gradients.) Tj T*
+(Step 5: update weights with the optimiser.) Tj T*
+(Step 6: repeat for many epochs; monitor validation loss.) Tj T*
+() Tj T*
+(6. Overfitting and Regularisation) Tj T*
+(Overfitting: low training error, high validation error - the model) Tj T*
+(memorises instead of generalising.) Tj T*
+(Remedies: more data, dropout, L2 weight decay, early stopping.) Tj T*
+() Tj T*
+(7. Self-check) Tj T*
+(Q1. Why does a network of only linear layers collapse to one layer?) Tj T*
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>
+endobj
+6 0 obj
+<< /Length 170 >>
+stream
+BT /F1 11 Tf 56 760 Td 15 TL
+(Q2. Derive the derivative of the sigmoid in terms of s\(z\).) Tj T*
+(Q3. What symptom in the validation curve signals overfitting?) Tj T*
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000002628 00000 n 
+0000002754 00000 n 
+0000002975 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+3045
+%%EOF

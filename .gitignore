@@ -57,3 +57,9 @@ opensource/07-underwater-atlas/app/node_modules/
 
 # Agent curl-journey artifacts (local scratch, never committed)
 Backend/.scratch/
+
+# Generated .apkg exports (FR-2.3 — derived artifacts, regenerable)
+Backend/static/
+
+# MS Office lock/owner files (e.g. ~$deck.pptx while PowerPoint is open)
+~$*

@@ -196,28 +196,88 @@ txt(s, 1, 4.9, 11.3, 0.9, [
 footer(s, n, dark_bg=True)
 notes(s, "1:30-1:45 — CUT TO GAMEPLAY C: dive, pan, one node drawer, surface.")
 
-# ── S7 · Under the hood ─────────────────────────────────────────────────────
+# ── S7 · Tech stack (one page: 3 whys on top, full list below) ─────────────
 s, n = slide(CREAM)
-kicker(s, "UNDER THE HOOD ⚙️", DEEP_TEAL)
-title(s, "Built to be trusted 🔧", NAVY)
-rows = [
-    ("🧠", "FastAPI + agent orchestrator  →  planner · flashcards · graph"),
-    ("🗄️", "Postgres + one ordered event stream  →  world never drifts"),
-    ("🕸️", "Next.js + three.js  →  one runtime path, no mock modes"),
-]
-y = 2.5
-for emoji, line in rows:
-    chip(s, 1.1, y, 11.1, 0.9, LIGHT_CHIP, [
-        (f"{emoji}  {line}", 22, NAVY, False),
-    ])
-    y += 1.12
-txt(s, 1, 6.0, 11.3, 0.7, [
-    ("AI absorbs the overhead — never the thinking. 🎯", 26, DEEP_TEAL, True),
-])
-footer(s, n, dark_bg=False)
-notes(s, "1:45-1:55 — don't read bullets; 'agents do the plumbing, Postgres is the single truth, AI never studies FOR you.'")
+kicker(s, "TECH STACK ⚙️", DEEP_TEAL)
+title(s, "Why this stack 🧰", NAVY, size=38, top=0.95)
 
-# ── S8 · Closing ────────────────────────────────────────────────────────────
+# Three talking points the owner presents verbally
+whys = [
+    ("🤖", "Multi-agent system", "specialised agents  →  higher quality"),
+    ("🦜🔗", "LangChain", "guides the AI  →  controlled, reliable output"),
+    ("🕸️", "Three.js", "powers the 3D game world in the browser"),
+]
+x = 1.1
+for emoji, name, why in whys:
+    chip(s, x, 2.05, 3.57, 1.5, LIGHT_CHIP, [
+        (f"{emoji}  {name}", 22, NAVY, True),
+        (why, 16, DEEP_TEAL, False),
+    ])
+    x += 3.77
+
+# Full stack list, grouped
+box(s, 1.1, 3.85, 11.1, 0.5, fill=DEEP_TEAL)
+txt(s, 1.45, 3.92, 10.4, 0.4, [("THE FULL STACK", 16, WHITE, True)], align=PP_ALIGN.LEFT)
+cols = [
+    ("FRONTEND 🖥️", [
+        "Next.js 16  ·  React 19  ·  TypeScript",
+        "Three.js  +  react-three-fiber",
+        "Zustand  ·  Tailwind CSS",
+    ]),
+    ("BACKEND 🧠", [
+        "Python 3.12  ·  FastAPI  ·  Pydantic",
+        "Multi-agent: orchestrator · planner · flashcards",
+        "LangChain / LangGraph  ·  SSE streaming",
+    ]),
+    ("DATA & INFRA 🗄️", [
+        "PostgreSQL 16  ·  SQLAlchemy async",
+        "Alembic migrations  ·  Docker Compose",
+        "event-sourced world state  →  never drifts",
+    ]),
+]
+x = 1.1
+for head, items in cols:
+    box(s, x, 4.35, 3.57, 2.15, fill=MIST)
+    txt(s, x + 0.3, 4.5, 3.0, 0.4, [(head, 15, DEEP_TEAL, True)], align=PP_ALIGN.LEFT)
+    txt(s, x + 0.3, 4.95, 3.05, 1.5,
+        [(i, 13.5, NAVY, False) for i in items], align=PP_ALIGN.LEFT)
+    x += 3.77
+footer(s, n, dark_bg=False)
+notes(s, "1:45-1:55 — talk ONLY the top 3: multi-agent for quality, LangChain to guide the AI, Three.js for the world. Point at the full list, don't read it.")
+
+# ── S8 · Standing on open source (credits, per agent — opensource/README.md) ─
+s, n = slide(DEEP_TEAL)
+kicker(s, "STANDING ON OPEN SOURCE 💙", SOFT_AMBER)
+title(s, "Built with open source, agent by agent 🌊", WHITE, size=36, top=0.95)
+
+oss = [
+    ("🛳️ Scheduler agent",
+     "LangGraph plan-and-execute  ·  obsidian-magic-tasks  ·  study-revision-planner"),
+    ("⛵ Flashcard agent",
+     "anki-llm-flashcard-generator (forked)  ·  py-fsrs  ·  genanki"),
+    ("🌊 Knowledge graph",
+     "langchain-experimental graph transformer  ·  nano-graphrag  ·  KeyBERT"),
+    ("🧭 Orchestrator",
+     "fastapi-langgraph-template  ·  langgraph-swarm handoffs"),
+    ("🎨 World rendering",
+     "stylized-water shaders  ·  camera-controls  ·  underwater-atlas engine (three.js + GLSL)"),
+    ("🧱 3D assets",
+     "Kenney CC0 boats  ·  custom Blender fishboat + lamp buoy"),
+]
+for i, (head, line) in enumerate(oss):
+    x = 1.1 + (i % 3) * 3.77
+    y = 2.05 + (i // 3) * 2.1
+    chip(s, x, y, 3.57, 1.85, DARK_CHIP, [
+        (head, 17, SOFT_AMBER, True),
+        (line, 13.5, CREAM, False),
+    ])
+txt(s, 1, 6.25, 11.3, 0.5, [
+    ("full credit list  →  opensource/README.md 📜", 15, MIST, False),
+])
+footer(s, n, dark_bg=True)
+notes(s, "Credit slide — not spoken in the 2:00. If asked about tech: 'each agent stands on proven open source — the list is in our repo.'")
+
+# ── S9 · Closing ────────────────────────────────────────────────────────────
 s, n = slide(NAVY)
 txt(s, 1, 1.3, 11.3, 1.0, [("🏮", 54, WHITE, False, EMOJI_FONT)])
 txt(s, 1, 2.4, 11.3, 1.2, [

@@ -16,24 +16,37 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { PALETTE } from "@/lib/theme";
 import { LAMP_POS } from "./layout";
-import { addOutlines, cloneScene, makeReflection, toToon } from "./modelUtils";
+import { addOutlines, cloneScene, fitToWater, toToon } from "./modelUtils";
 import LabelPill from "./LabelPill";
 import { useWorldStore } from "./worldStore";
 
-/** The GLB was authored with its origin 12 units off-center (see session 012). */
-const GLB_OFFSET_X = -12;
+/** World footprint: 13 u wide, draft 0.8 — the collar visibly floats.
+ *  Outline width in WORLD units. */
+const LAMP_WIDTH = 13;
+const LAMP_DRAFT = 0.8;
+const OUTLINE_WORLD = 0.2;
+/** Vertical stretch after fitting — a taller, lighthouse-like silhouette. */
+const LAMP_TALL = 1.4;
 
 export default function LampBuoy() {
   const { scene } = useGLTF("/models/lamp-buoy.glb");
   const group = useRef<THREE.Group>(null);
   const lampGlow = useWorldStore((s) => s.lampGlow);
   const lampPulseNonce = useWorldStore((s) => s.lampPulseNonce);
+  const onOpenJournal = useWorldStore((s) => s.hostHandlers.onOpenJournal);
   const pulseStart = useRef<number | null>(null);
 
-  const { model, reflection, lantern, light } = useMemo(() => {
+  const { model, lantern, light } = useMemo(() => {
     const model = cloneScene(scene);
     toToon(model);
-    addOutlines(model, 0.03);
+    // fitToWater also centers the GLB (its origin is authored off-center).
+    const fitScale = fitToWater(model, LAMP_WIDTH, LAMP_DRAFT);
+    // Taller silhouette: stretch Y, then re-ground the waterline (the
+    // stretch deepens the draft — restore box.min.y = −LAMP_DRAFT).
+    model.scale.y *= LAMP_TALL;
+    const stretched = new THREE.Box3().setFromObject(model);
+    model.position.y -= stretched.min.y + LAMP_DRAFT;
+    addOutlines(model, OUTLINE_WORLD / fitScale); // world-unit navy linework
 
     let lanternMat: THREE.MeshToonMaterial | null = null;
     model.traverse((obj) => {
@@ -52,10 +65,11 @@ export default function LampBuoy() {
       );
     }
 
-    const reflection = makeReflection(model, 0.6, 6.0);
-    const light = new THREE.PointLight(PALETTE.lanternGlow.hex, 2, 16, 2);
-    light.position.set(0, 3.9, 0); // lantern height, after recentering
-    return { model, reflection, lantern, light };
+    // The lantern's warm light (bright-day grade): amber, bright base with a
+    // gentle 2.2 rad/s ±3 breathing pulse, long reach, physical falloff.
+    const light = new THREE.PointLight(PALETTE.lampAmber.hex, 14, 70, 2);
+    light.position.set(0, 26, 0); // lantern height on the tall 13 u buoy
+    return { model, lantern, light };
   }, [scene]);
 
   // FR-2.6/FR-4.4: a warm glow pulse when the lamp gains a record.
@@ -80,21 +94,20 @@ export default function LampBuoy() {
       if (elapsed > 3) pulseStart.current = null;
     }
     lantern.emissiveIntensity = (0.7 + lampGlow * 1.2) * (1 + pulse);
-    light.intensity = (1.2 + lampGlow * 2.2) * (1 + pulse);
+    // FR-4.4 glow level scales the base; the 2.2 rad/s ±3 pulse breathes on top.
+    light.intensity = (14 * (0.5 + lampGlow * 0.5) + Math.sin(t * 2.2) * 3) * (1 + pulse);
   });
   /* eslint-enable react-hooks/immutability */
 
   return (
     <group position={[LAMP_POS[0], 0, LAMP_POS[2]]}>
       <group ref={group}>
-        <group position={[GLB_OFFSET_X, 0, 0]}>
-          <primitive object={model} />
-          <primitive object={reflection} />
-        </group>
+        <primitive object={model} />
         <primitive object={light} />
       </group>
-      <group position={[0, 6.6, 0]}>
-        <LabelPill text="Journal" size="md" worldId="lamp" />
+      <group position={[0, 40, 0]}>
+        {/* FR-4.3: the "Journal" pill opens the journal view (records). */}
+        <LabelPill text="Journal" size="md" worldId="lamp" onClick={onOpenJournal} />
       </group>
     </group>
   );

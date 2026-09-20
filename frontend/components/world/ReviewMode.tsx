@@ -34,6 +34,10 @@ import {
 const SINK_DEPTH = -2.4;
 const RISE_FROM = -2.4;
 
+/** Review-boat world lengths (fitToWater): the small stage boats of the POV. */
+const GRADE_BOAT_LENGTH = 1.05;
+const CARD_BOAT_LENGTH = 1.2;
+
 /** Grade presentation: soft amber for "Again" (NEVER red), pastel row. */
 const GRADE_STYLE: Record<GradeRating, { tint: string; label: string }> = {
   again: { tint: PALETTE.softAmber.hex, label: "Again" },
@@ -95,7 +99,7 @@ function GradeBoat({
   sinking: boolean;
   onGrade: (rating: GradeRating) => void;
 }) {
-  const { model, reflection } = useSmallBoatModel(GRADE_STYLE[rating].tint);
+  const model = useSmallBoatModel(GRADE_STYLE[rating].tint, GRADE_BOAT_LENGTH);
   const reducedMotion = useWorldStore((s) => s.reducedMotion);
   const outer = useRef<THREE.Group>(null);
   const modelGroup = useRef<THREE.Group>(null);
@@ -131,14 +135,12 @@ function GradeBoat({
     mg.position.y = y.current + Math.sin(clock.elapsedTime * 0.8 + index * 1.9) * 0.04;
     mg.rotation.z = Math.sin(clock.elapsedTime * 0.6 + index) * 0.02;
     setGroupOpacity(mg, opacity.current);
-    setGroupOpacity(reflection, opacity.current * 0.3);
   });
 
   return (
     <group ref={outer}>
-      <group ref={modelGroup} scale={0.26} rotation-y={Math.PI} onClick={() => onGrade(rating)}>
+      <group ref={modelGroup} rotation-y={Math.PI} onClick={() => onGrade(rating)}>
         <primitive object={model} />
-        <primitive object={reflection} />
       </group>
       {pillShown && (
         <group position={[0, 1.6, 0]}>
@@ -156,7 +158,7 @@ function GradeBoat({
 
 /** The card boat: carries the current question; rises with each new card. */
 function CardBoat({ reviewing }: { reviewing: ReviewState }) {
-  const { model, reflection } = useSmallBoatModel(PALETTE.sailSage.hex);
+  const model = useSmallBoatModel(PALETTE.sailSage.hex, CARD_BOAT_LENGTH);
   const reducedMotion = useWorldStore((s) => s.reducedMotion);
   const revealAnswer = useWorldStore((s) => s.revealAnswer);
   const onReveal = useWorldStore((s) => s.hostHandlers.onReveal);
@@ -176,7 +178,6 @@ function CardBoat({ reviewing }: { reviewing: ReviewState }) {
     }
     mg.position.y = y.current + Math.sin(clock.elapsedTime * 0.65 + 0.8) * 0.05;
     setGroupOpacity(mg, opacity.current);
-    setGroupOpacity(reflection, opacity.current * 0.3);
   });
 
   // New card → restart the rise from below (FR-2.5.5 "out of nowhere").
@@ -190,9 +191,8 @@ function CardBoat({ reviewing }: { reviewing: ReviewState }) {
 
   return (
     <group>
-      <group ref={modelGroup} scale={0.3} rotation-y={Math.PI}>
+      <group ref={modelGroup} rotation-y={Math.PI}>
         <primitive object={model} />
-        <primitive object={reflection} />
       </group>
       <RippleRing trigger={reviewing.riseNonce} />
 

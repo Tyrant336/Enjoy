@@ -1,8 +1,10 @@
-"""Scheduler Agent service — persistence around the template planner.
+"""Scheduler Agent service — persistence around the LangGraph planner.
 
 Agents talk to each other ONLY through the Orchestrator (AGENTS.md §4.3) —
 this module is called by the scheduler API and by the orchestrator service,
-never by another agent.
+never by another agent. LLM failures (LLMError) propagate to the caller,
+which turns them into the §5.2 envelope (+ SSE error where a workflow is
+active) — never a canned plan (§3.4).
 """
 
 import uuid
@@ -29,7 +31,7 @@ async def create_plan(
 ) -> s.StudyPlan:
     """Build + persist a StudyPlan (the newest plan becomes the active one)."""
     today = datetime.now(ZoneInfo(user.timezone)).date()
-    plan = build_plan(request, today)
+    plan = await build_plan(request, today)
 
     # FK flush tiers (session 013: UOW does not order by table-level FKs).
     session.add(

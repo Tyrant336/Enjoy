@@ -1,12 +1,13 @@
 """Flashcard Agent — review sessions (FR-2.5, FR-2.8, FR-2.9).
 
-P0 scheduling (FR-2.8 — THE P0 scheduler, deterministic, one path):
-fixed intervals Again = 5 min, Hard = +1 day, Good = +3 days, Easy = +7 days.
+Scheduling (FR-2.8 P1): real `py-fsrs` via `fsrs_state.apply_rating` — THE
+one scheduler; per-card state persists in `flashcards.fsrs` JSONB. The P0
+fixed-interval map is gone (P1 replaces it; §3.6 kill, don't accumulate).
 
-P0 session rule (FR-2.9): a session contains exactly the cards due when the
-deck is opened; each due card is shown ONCE per session (an "Again" grade
-schedules it sooner but does NOT re-show it in-session); when every
-initially-due card has been graded once, the deck completes (FR-2.6).
+Review-session rule (FR-2.9, unchanged): a session contains exactly the cards
+due when the deck is opened; each due card is shown ONCE per session (an
+"Again" grade schedules it sooner but does NOT re-show it in-session); when
+every initially-due card has been graded once, the deck completes (FR-2.6).
 
 Session state is DERIVED from the append-only `review_events` log + the
 `records` journal via `app/services/review_session.py` (the ONE derivation,
@@ -24,7 +25,7 @@ another agent directly (AGENTS.md §4.3).
 """
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Literal
 
 from pydantic import Field
@@ -33,20 +34,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models as m
 from app import schemas as s
+from app.agents.flashcards import fsrs_state
 from app.core.errors import AppError
 from app.services import outbox
 from app.services.review_session import SessionState, card_schema, session_state
 from app.services.world_state import LAMP_GLOW_PER_RECORD
 
 Rating = Literal["again", "hard", "good", "easy"]
-
-# FR-2.8 P0 fixed intervals (labeled in code as P0 scheduling, per contract).
-P0_INTERVALS: dict[str, timedelta] = {
-    "again": timedelta(minutes=5),
-    "hard": timedelta(days=1),
-    "good": timedelta(days=3),
-    "easy": timedelta(days=7),
-}
 
 # FR-2.5.8 — nothing due (warm, never pressure).
 NOTHING_DUE_MESSAGE = "Nothing is waiting for you right now. Your harbour can rest."
@@ -188,21 +182,17 @@ async def grade(
     ONE transaction (§5.3): card + review_event (+ record on completion) and
     the outbox events commit together. Final card of a session →
     sink_boat → dock_at_lamp → lamp_glow; otherwise sink_boat → rise_boat.
+
+    py-fsrs computes the next due from the card's stored FSRS state
+    (fsrs_state.py, FR-2.8 P1); the FR-2.9 session rule below is unchanged.
     """
     card = await _get_card(session, user.id, card_id)
     deck = await _get_deck(session, user.id, card.deck_id)
     now = datetime.now(UTC)
 
-    interval = P0_INTERVALS[rating]
-    card.due = now + interval
-    old_fsrs = s.FsrsState.model_validate(card.fsrs)
-    card.fsrs = s.FsrsState(
-        state="review",
-        stability=old_fsrs.stability,
-        difficulty=old_fsrs.difficulty,
-        interval_days=interval.total_seconds() / 86400,
-        reps=old_fsrs.reps + 1,
-    ).model_dump(by_alias=True)
+    card.due, card.fsrs = fsrs_state.apply_rating(
+        card.id, card.due, card.fsrs, rating, now
+    )
     session.add(
         m.ReviewEvent(
             user_id=user.id, card_id=card.id, deck_id=deck.id, rating=rating

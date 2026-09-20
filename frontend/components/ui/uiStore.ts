@@ -35,6 +35,8 @@ export type UiStore = {
   /** Whether the worldBus is feeding events (ChatPanel dedupes acks on it). */
   busConnected: boolean;
   taskSheetOpen: boolean;
+  /** FR-4.3 journal view (the lamp's "Journal" pill). */
+  journalOpen: boolean;
 
   addTranscript: (line: TranscriptLine) => void;
   setTourOffer: (roadmapId: string | null) => void;
@@ -45,6 +47,7 @@ export type UiStore = {
   setWorldState: (state: WorldState) => void;
   setBusConnected: (connected: boolean) => void;
   setTaskSheetOpen: (open: boolean) => void;
+  setJournalOpen: (open: boolean) => void;
 };
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -57,6 +60,7 @@ export const useUiStore = create<UiStore>((set) => ({
   worldState: null,
   busConnected: false,
   taskSheetOpen: false,
+  journalOpen: false,
 
   addTranscript: (line) =>
     set((s) =>
@@ -84,4 +88,5 @@ export const useUiStore = create<UiStore>((set) => ({
     })),
   setBusConnected: (connected) => set({ busConnected: connected }),
   setTaskSheetOpen: (open) => set({ taskSheetOpen: open }),
+  setJournalOpen: (open) => set({ journalOpen: open }),
 }));

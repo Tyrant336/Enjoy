@@ -1,76 +1,55 @@
-"""Template planner — FR-1.5 P0. THE planner (one path, not a mode).
+"""LangGraph plan-execute-replan planner — FR-1.5 P1. THE planner (one path).
 
-Deterministic, goblin.tools-style (obsidian-magic-tasks pattern, 01-distill):
-emotional/vague input → (a) one warm empathy line, (b) a verb-first task
-breakdown sized by spice level 1-5 (FR-1.2), (c) a schedule sized to
-deadline / hours-per-day with sensible defaults (FR-1.1).
+The P0 deterministic template planner is DELETED (§3.6 kill, don't
+accumulate) — this graph is the only breakdown engine. The canonical
+`StudyPlan` output contract (schemas.py) is UNCHANGED.
 
-Full LangGraph plan-execute-replan replaces the internals in P1 — the
-canonical StudyPlan output contract does not change. No LLM calls here; no
-input ever "falls back" to anything — every input gets the same honest
-template treatment.
+Graph (pattern: opensource/01-scheduler-fishboat/langgraph-plan-and-execute):
 
-Scheduling rules (deterministic, documented):
-- Tasks pack greedily into days starting TODAY (user-local, passed in) up to
-  `hours_per_day` (default 2.0 h) of estimated minutes per day.
-- Slots cycle morning → afternoon → evening within each day.
-- With a deadline: if the greedy plan needs more days than remain (deadline
-  day inclusive), tasks are spread evenly across the remaining days instead
-  (deadline wins over the hours cap — documented). A past deadline schedules
-  everything starting today, deadline ignored as unmeetable input.
+    understand ──► plan ──► execute ──► replan ──► END
+    (LLM: goal +   (LLM: topic-   (deterministic  (deterministic:
+     empathy,       specific       greedy day-     deadline unmet →
+     kills D1/D3)   breakdown,     packing)        even spread;
+                    kills D5)                       else pass)
+
+- Goal extraction is an LLM structured-output node: emotional preamble
+  ("I'm overwhelmed") and zone words ("fishboat") are stripped from the goal
+  (eval defects D1/D3, session 025). Schema mismatch = loud LLMError (§2.4).
+- Deadlines: explicit `request.deadline` wins; otherwise the ONE date-phrase
+  resolver (`scripts/seed_dates.resolve_natural_date`) parses "in 5 days" /
+  "next month" from the message (D2). A past deadline is unmeetable input —
+  ignored, scheduled from today (documented P0 behavior, kept).
+- FR-1.4 deck request: the single hardest subtask (max difficulty, first on
+  ties) carries `deckRequest` — deterministic rule, documented.
+- Slots (D6 fix): morning → afternoon → evening → night within a day.
 """
 
+import logging
 import uuid
 from datetime import date, timedelta
+from typing import TypedDict, cast
 
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from pydantic import Field
 
+from app.core import llm
 from app.schemas import ContractModel, DeckRequest, StudyPlan, StudyTask
+from scripts.seed_dates import resolve_natural_date
+
+logger = logging.getLogger("enjoy.scheduler.planner")
 
 DEFAULT_GRANULARITY = 3  # FR-1.2
 DEFAULT_HOURS_PER_DAY = 2.0
 
-# How many template steps each spice level expands to (FR-1.2:
-# 1 = 3-5 broad steps … 5 = 15-20 micro-steps).
-_GRANULARITY_TASK_COUNT = {1: 3, 2: 4, 3: 6, 4: 10, 5: 15}
+# Target task count per spice level (FR-1.2: 1 = 3-5 broad steps …
+# 5 = 15-20 micro-steps) with the acceptance band the LLM output must land in.
+_GRANULARITY_TARGET = {1: 3, 2: 4, 3: 6, 4: 10, 5: 15}
+_GRANULARITY_BAND = {1: (3, 5), 2: (4, 7), 3: (5, 8), 4: (8, 12), 5: (13, 20)}
 
-# Verb-first, ≤45 min, obviously finishable (FR-1.1). Pedagogical order:
-# survey → vocabulary → understand → practice → recall → consolidate.
-# (title template, minutes, difficulty 1-5)
-_TASK_TEMPLATES: list[tuple[str, int, int]] = [
-    ("Map the big picture of {topic}", 15, 1),
-    ("List the key terms of {topic}", 15, 2),
-    ("Explain the core ideas of {topic} in your own words", 25, 3),
-    ("Work through {topic} examples step by step", 30, 3),
-    ("Recall {topic} from memory on a blank page", 20, 3),
-    ("Test yourself on {topic} with practice questions", 30, 4),
-    ("Skim your {topic} notes and mark what feels shaky", 15, 2),
-    ("Summarize {topic} on one page", 20, 3),
-    ("Drill your {topic} flashcards for ten minutes", 10, 1),
-    ("Redo the {topic} problems you missed", 25, 4),
-    ("Connect {topic} to things you already know", 15, 3),
-    ("Explain {topic} out loud in five sentences", 15, 2),
-    ("Review your weak spots in {topic}", 25, 2),
-    ("Sketch a {topic} cheat-sheet from memory", 20, 3),
-    ("Do one final light recall of {topic}", 10, 1),
-]
+_SLOTS = ("morning", "afternoon", "evening", "night")  # D6: no same-day repeat ≤4
 
-# FR-1.4: the "explain the core ideas" step is the ambiguous/hard subtask that
-# may want a flashcard deck (via the Orchestrator only — never directly).
-_DECK_REQUEST_TEMPLATE_INDEX = 2
-
-# Leading filler stripped to find the goal inside an emotional message.
-_GOAL_PREFIXES = (
-    "i'm afraid of ", "im afraid of ", "i am afraid of ", "afraid of ",
-    "i'm scared of ", "im scared of ", "i am scared of ", "scared of ",
-    "i'm worried about ", "im worried about ", "worried about ",
-    "i don't know how to ", "i dont know how to ", "i don't know ",
-    "can you help me ", "could you help me ", "help me ", "help ",
-    "i need to ", "i want to ", "i have to ", "i must ", "i really need to ",
-    "please help me ", "please ", "how do i ", "how can i ", "teach me ",
-)
-
-_SLOTS = ("morning", "afternoon", "evening")
+MAX_TASK_MINUTES = 45  # FR-1.1
 
 
 class PlanRequest(ContractModel):
@@ -82,33 +61,152 @@ class PlanRequest(ContractModel):
     hours_per_day: float | None = Field(default=None, gt=0, le=16)
 
 
-def extract_goal(message: str) -> str:
-    """Best-effort deterministic goal extraction: strip known emotional
-    prefixes and punctuation; fall back to the full message (never empty)."""
-    text = " ".join(message.strip().split())
-    lowered = text.lower()
-    for prefix in _GOAL_PREFIXES:
-        if lowered.startswith(prefix):
-            text = text[len(prefix):]
-            break
-    return text.strip(" .!?") or message.strip()
+class GoalExtraction(ContractModel):
+    """LLM output of the `understand` node."""
+
+    goal: str = Field(min_length=1, max_length=120)
+    empathy_line: str = Field(min_length=1, max_length=300)
 
 
-def _empathy_line(goal: str) -> str:
-    short = goal if len(goal) <= 60 else goal[:57].rstrip() + "…"
-    return f"{short} feels big right now — we'll take it one small step at a time."
+class PlannedTask(ContractModel):
+    """LLM output of the `plan` node, per task."""
+
+    title: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=400)
+    estimate_minutes: int = Field(ge=5, le=MAX_TASK_MINUTES)
+    difficulty: int = Field(ge=1, le=5)
 
 
-def _schedule(
-    tasks: list[StudyTask],
-    today: date,
-    deadline: date | None,
-    hours_per_day: float,
-) -> None:
-    """Assign scheduledFor + slot in place (see module docstring for rules)."""
+class TaskBreakdown(ContractModel):
+    tasks: list[PlannedTask] = Field(min_length=1)
+
+
+class _PlanState(TypedDict):
+    request: PlanRequest
+    today: date
+    plan_id: str
+    goal: str
+    empathy_line: str
+    deadline: date | None
+    tasks: list[StudyTask]
+
+
+# ── prompts ───────────────────────────────────────────────────────────────────
+
+_UNDERSTAND_SYSTEM = """\
+You are the Scheduler Agent of a calm study app (a safe harbour for stressed \
+students). From the student's message extract:
+- goal: the pure learning goal, 2-10 words, no emotional preamble ("I'm \
+overwhelmed", "I'm afraid of"), no app-zone words (fishboat, small boats, \
+atlas, underwater, lamp, journal), no scheduling meta ("in 5 days"). Just \
+the topic and intent, e.g. "prepare for the calculus exam".
+- empathyLine: ONE warm sentence acknowledging the feeling, never pressure, \
+never guilt, never mention streaks or deadlines as threats."""
+
+_PLAN_SYSTEM = """\
+You are the Scheduler Agent of a calm study app. Break the student's learning \
+goal into small study tasks (goblin.tools Magic ToDo style).
+
+Hard rules (violations are rejected):
+- Each task: verb-first title, ≤45 minutes, obviously finishable, concrete \
+and SPECIFIC to the topic (never generic filler like "review your notes").
+- description: one sentence on how to do it.
+- difficulty: 1 (easy) to 5 (hard).
+- Pedagogical order: survey → vocabulary → understand → practice → recall → \
+consolidate.
+- Produce EXACTLY the requested number of tasks."""
+
+
+# ── nodes ─────────────────────────────────────────────────────────────────────
+
+
+async def _understand(state: _PlanState) -> dict[str, object]:
+    request = state["request"]
+    extraction = await llm.structured(
+        GoalExtraction,
+        system=_UNDERSTAND_SYSTEM,
+        user=f"Message: {request.input}",
+    )
+    # Deadline: explicit request field wins; else the ONE phrase resolver (D2).
+    deadline = request.deadline or resolve_natural_date(request.input, state["today"])
+    if deadline is not None and deadline < state["today"]:
+        logger.info("planner: past deadline %s ignored as unmeetable", deadline)
+        deadline = None
+    logger.info(
+        "planner understand: goal=%r deadline=%s", extraction.goal, deadline
+    )
+    return {
+        "goal": extraction.goal,
+        "empathy_line": extraction.empathy_line,
+        "deadline": deadline,
+    }
+
+
+async def _plan(state: _PlanState) -> dict[str, object]:
+    request = state["request"]
+    target = _GRANULARITY_TARGET[request.granularity]
+    breakdown = await llm.structured(
+        TaskBreakdown,
+        system=_PLAN_SYSTEM,
+        user=(
+            f"Goal: {state['goal']}\n"
+            f"Produce exactly {target} tasks "
+            f"(spice level {request.granularity} of 5)."
+        ),
+    )
+    low, high = _GRANULARITY_BAND[request.granularity]
+    if not low <= len(breakdown.tasks) <= high:
+        raise llm.LLMError(
+            f"Task breakdown returned {len(breakdown.tasks)} tasks for "
+            f"granularity {request.granularity} (accepted band {low}-{high}).",
+            payload=breakdown.model_dump(mode="json"),
+        )
+
+    # FR-1.4: the single hardest subtask may want a deck (deterministic rule).
+    hardest = max(
+        range(len(breakdown.tasks)),
+        key=lambda i: breakdown.tasks[i].difficulty,
+    )
+    plan_id = state["plan_id"]
+    tasks: list[StudyTask] = []
+    previous_id: str | None = None
+    for i, planned in enumerate(breakdown.tasks):
+        task_id = f"{plan_id}-t{i + 1:02d}"
+        tasks.append(
+            StudyTask(
+                id=task_id,
+                title=planned.title,
+                description=planned.description,
+                estimate_minutes=planned.estimate_minutes,
+                difficulty=planned.difficulty,
+                status="todo",
+                scheduled_for=None,  # assigned by execute/replan
+                slot=None,
+                depends_on=[previous_id] if previous_id else [],
+                deck_request=(
+                    DeckRequest(requested=True, topic=state["goal"])
+                    if i == hardest
+                    else None
+                ),
+                world_label=f"{planned.title} · {planned.estimate_minutes} min",
+            )
+        )
+        previous_id = task_id
+    return {"tasks": tasks}
+
+
+def _assign_days(tasks: list[StudyTask], days: list[list[int]], today: date) -> None:
+    for day_offset, indexes in enumerate(days):
+        for slot_index, task_index in enumerate(indexes):
+            task = tasks[task_index]
+            task.scheduled_for = today + timedelta(days=day_offset)
+            task.slot = _SLOTS[slot_index % len(_SLOTS)]
+
+
+def _greedy_days(tasks: list[StudyTask], hours_per_day: float) -> list[list[int]]:
+    """Pack tasks into days up to the hours-per-day capacity (in order)."""
     capacity = int(hours_per_day * 60)
-    # Greedy packing into days: list of (date, minutes_used).
-    days: list[list[int]] = []  # per-day task indexes
+    days: list[list[int]] = []
     current: list[int] = []
     used = 0
     for i, task in enumerate(tasks):
@@ -119,73 +217,84 @@ def _schedule(
         used += task.estimate_minutes
     if current:
         days.append(current)
-
-    if deadline is not None and deadline >= today:
-        days_available = (deadline - today).days + 1
-        if len(days) > days_available:
-            # Deadline wins over the hours cap: spread evenly across what
-            # remains (documented in the module docstring).
-            per_day = -(-len(tasks) // days_available)  # ceil
-            days = [
-                list(range(start, min(start + per_day, len(tasks))))
-                for start in range(0, len(tasks), per_day)
-            ]
-
-    for day_offset, indexes in enumerate(days):
-        for slot_index, task_index in enumerate(indexes):
-            task = tasks[task_index]
-            task.scheduled_for = today + timedelta(days=day_offset)
-            task.slot = _SLOTS[slot_index % len(_SLOTS)]
+    return days
 
 
-def build_plan(
+async def _execute(state: _PlanState) -> dict[str, object]:
+    """Executor: greedy day-packing from TODAY at the hours-per-day cap."""
+    hours = state["request"].hours_per_day or DEFAULT_HOURS_PER_DAY
+    _assign_days(state["tasks"], _greedy_days(state["tasks"], hours), state["today"])
+    return {"tasks": state["tasks"]}
+
+
+async def _replan(state: _PlanState) -> dict[str, object]:
+    """Replanner: if the greedy plan overruns the deadline, spread the tasks
+    evenly across the remaining days (deadline wins over the hours cap —
+    documented behavior). Otherwise the plan stands (single replan pass)."""
+    deadline = state["deadline"]
+    tasks = state["tasks"]
+    if deadline is None or not tasks:
+        return {"tasks": tasks}
+    last_day = max(t.scheduled_for for t in tasks if t.scheduled_for)
+    if last_day is None or last_day <= deadline:
+        return {"tasks": tasks}
+    days_available = (deadline - state["today"]).days + 1
+    logger.info(
+        "planner replan: greedy plan overruns deadline %s — spreading over %d days",
+        deadline, days_available,
+    )
+    per_day = -(-len(tasks) // days_available)  # ceil
+    days = [
+        list(range(start, min(start + per_day, len(tasks))))
+        for start in range(0, len(tasks), per_day)
+    ]
+    _assign_days(tasks, days, state["today"])
+    return {"tasks": tasks}
+
+
+_PlanGraph = CompiledStateGraph[_PlanState, None, _PlanState, _PlanState]
+
+
+def _build_graph() -> _PlanGraph:
+    graph = StateGraph(_PlanState)
+    graph.add_node("understand", _understand)
+    graph.add_node("plan", _plan)
+    graph.add_node("execute", _execute)
+    graph.add_node("replan", _replan)
+    graph.add_edge(START, "understand")
+    graph.add_edge("understand", "plan")
+    graph.add_edge("plan", "execute")
+    graph.add_edge("execute", "replan")
+    graph.add_edge("replan", END)
+    return cast(_PlanGraph, graph.compile())
+
+
+_PLAN_GRAPH = _build_graph()
+
+
+async def build_plan(
     request: PlanRequest,
     today: date,
     plan_id: str | None = None,
 ) -> StudyPlan:
-    """Build the canonical StudyPlan. Pure: no I/O, clock injected via today."""
+    """Build the canonical StudyPlan via the plan-execute-replan graph.
+    Clock injected via `today`; LLM failures raise LLMError (loud)."""
     plan_id = plan_id or f"plan-{uuid.uuid4().hex[:8]}"
-    goal = extract_goal(request.input)
-    count = _GRANULARITY_TASK_COUNT[request.granularity]
-    topic = goal
-
-    tasks: list[StudyTask] = []
-    previous_id: str | None = None
-    for i, (title_tpl, minutes, difficulty) in enumerate(_TASK_TEMPLATES[:count]):
-        task_id = f"{plan_id}-t{i + 1:02d}"
-        title = title_tpl.format(topic=topic)
-        deck_request = (
-            DeckRequest(requested=True, topic=topic)
-            if i == _DECK_REQUEST_TEMPLATE_INDEX
-            else None
-        )
-        tasks.append(
-            StudyTask(
-                id=task_id,
-                title=title,
-                description=f"{title}. One small, finishable step.",
-                estimate_minutes=minutes,
-                difficulty=difficulty,
-                status="todo",
-                scheduled_for=None,  # assigned by _schedule below
-                slot=None,
-                depends_on=[previous_id] if previous_id else [],
-                deck_request=deck_request,
-                world_label=f"{title} · {minutes} min",
-            )
-        )
-        previous_id = task_id
-
-    _schedule(
-        tasks,
-        today,
-        request.deadline,
-        request.hours_per_day or DEFAULT_HOURS_PER_DAY,
+    result = await _PLAN_GRAPH.ainvoke(
+        {
+            "request": request,
+            "today": today,
+            "plan_id": plan_id,
+            "goal": "",
+            "empathy_line": "",
+            "deadline": None,
+            "tasks": [],
+        }
     )
     return StudyPlan(
         id=plan_id,
-        goal=goal,
-        empathy_line=_empathy_line(goal),
+        goal=str(result["goal"]),
+        empathy_line=str(result["empathy_line"]),
         granularity=request.granularity,
-        tasks=tasks,
+        tasks=[StudyTask.model_validate(t) for t in result["tasks"]],
     )

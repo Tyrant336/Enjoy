@@ -6,10 +6,14 @@
  * 07 engine (frontend/lib/atlas/atlas.js) on its OWN canvas, visible only in
  * underwater mode with strict mount/unmount (a single engine instance).
  *
- * Data: ONE path — fixture/API KnowledgeGraph → atlasAdapter → loadPdfGraph
- * (§4.3.3). Node click → engine detail drawer with gloss + linked deck/task
- * ids (FR-3.5). A visible "Surface" control always exists underwater (§4.3.2).
- * WebGL unavailable or malformed data → explicit soft-amber state (AGENTS.md §2).
+ * Data: ONE path — `GET /agents/kg/graph` (canonical KnowledgeGraph) →
+ * atlasAdapter → loadPdfGraph (§4.3.3). Refetched on the same resync moment
+ * the worldBus uses (the rebuilt WorldState's graphSummary in uiStore — no
+ * second channel). Node click → engine detail drawer with gloss + linked
+ * deck/task ids (FR-3.5). The visible "Surface" control underwater is the
+ * app-level ViewPanel (§4.3.2 — one path, session 023; do not re-add one
+ * here). WebGL unavailable, a failed fetch, or malformed data → explicit
+ * soft-amber state (AGENTS.md §2).
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -18,7 +22,8 @@ import { adaptGraphToAtlas } from "@/lib/atlas/atlasAdapter";
 import type { KnowledgeGraph } from "@/lib/types";
 import { LABEL, MOTION, PALETTE } from "@/lib/theme";
 import { useWorldStore } from "@/components/world/worldStore";
-import seedGraph from "@/lib/fixtures/atlas-seed.json";
+import { harbourFetch, HarbourApiError } from "@/components/ui/api";
+import { useUiStore } from "@/components/ui/uiStore";
 
 type ClusterChip = { id: string; name: string; color: string; count: number };
 type DrawerData = {
@@ -60,9 +65,6 @@ export default function AtlasLayer() {
 }
 
 function AtlasEngine() {
-  const reducedMotion = useWorldStore((s) => s.reducedMotion);
-  const surface = useWorldStore((s) => s.surface);
-
   const stage = useRef<HTMLDivElement>(null);
   const labels = useRef<HTMLDivElement>(null);
   const hudMode = useRef<HTMLElement>(null);
@@ -81,11 +83,41 @@ function AtlasEngine() {
   const [drawer, setDrawer] = useState<DrawerData | null>(null);
   const [clusters, setClusters] = useState<ClusterChip[]>([]);
   const [clusterOff, setClusterOff] = useState<string[]>([]);
+  const [graph, setGraph] = useState<KnowledgeGraph | null>(null);
+
+  // Live data (§4.3.3): the canonical graph, refetched on mount AND whenever
+  // the worldBus's rebuilt WorldState reports a changed graphSummary — the
+  // same resync moment the world uses, no second channel.
+  const graphSummary = useUiStore((s) => s.worldState?.graphSummary ?? null);
+  const summaryKey = graphSummary
+    ? `${graphSummary.nodeCount}:${graphSummary.edgeCount}`
+    : "boot";
+  useEffect(() => {
+    let cancelled = false;
+    harbourFetch<KnowledgeGraph>("/agents/kg/graph")
+      .then((g) => {
+        if (!cancelled) setGraph(g);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        // Loud (AGENTS.md §2): a failed atlas fetch is an explicit soft-amber
+        // state, never a silently empty underwater world.
+        const message =
+          err instanceof HarbourApiError
+            ? err.envelope.message
+            : err instanceof Error
+              ? err.message
+              : String(err);
+        setFatal(message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [summaryKey]);
 
   useEffect(() => {
     // §7.2: an empty atlas is a gentle placeholder, never a broken engine.
-    const graph = seedGraph as unknown as KnowledgeGraph;
-    if (graph.nodes.length === 0) return;
+    if (!graph || graph.nodes.length === 0) return;
 
     let a: AtlasApi;
     try {
@@ -120,16 +152,16 @@ function AtlasEngine() {
       return;
     }
     api.current = a;
-    // §7.4: reduced motion → no auto-orbit on open.
-    if (reducedMotion) a.toggleSpin();
+    // §7.4: reduced motion → no auto-orbit on open (read at engine build).
+    if (useWorldStore.getState().reducedMotion) a.toggleSpin();
     return () => {
       a.dispose();
       api.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [graph]);
 
-  const empty = (seedGraph as unknown as KnowledgeGraph).nodes.length === 0;
+  const empty = graph !== null && graph.nodes.length === 0;
+  const loading = graph === null && !fatal;
 
   return (
     <div style={{ position: "absolute", inset: 0, zIndex: 20, background: PALETTE.abyssDeep.hex }}>
@@ -152,6 +184,15 @@ function AtlasEngine() {
       {/* Engine stage (canvas mounts here) + projected-label host. */}
       <div ref={stage} className="atlas-stage" style={{ position: "absolute", inset: 0 }} />
       <div ref={labels} className="atlas-labels" />
+
+      {/* §7.2 calm loading state (slow pulse, teal — never flashing). */}
+      {loading && (
+        <div style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", zIndex: 5 }}>
+          <div role="status" className="animate-pulse" style={{ color: PALETTE.mist.hex, fontFamily: "system-ui", fontSize: 15, opacity: 0.85 }}>
+            Your atlas is surfacing…
+          </div>
+        </div>
+      )}
 
       {/* §7.2 empty-atlas placeholder. */}
       {empty && (
@@ -252,23 +293,6 @@ function AtlasEngine() {
         <button type="button" style={toolBtn} ref={zlvl} onClick={() => api.current?.zoomReset()}>100%</button>
         <button type="button" style={toolBtn} onClick={() => api.current?.dolly(1 / 1.18)}>＋</button>
         <button type="button" style={toolBtn} onClick={() => api.current?.reset()}>Reset</button>
-      </div>
-
-      {/* §4.3.2: a visible "Surface" control ALWAYS exists underwater.
-          (Offset left of the app-level Labels toggle in the top corner.) */}
-      <div style={{ position: "absolute", top: 16, right: 100, zIndex: 4 }}>
-        <button
-          type="button"
-          onClick={surface}
-          style={{
-            background: LABEL.fill, color: LABEL.text, boxShadow: LABEL.shadow,
-            border: "none", borderRadius: 999, padding: "8px 16px",
-            fontSize: 13, fontWeight: 550, cursor: "pointer",
-            fontFamily: "ui-rounded, system-ui, sans-serif",
-          }}
-        >
-          ↑ Surface
-        </button>
       </div>
 
       {/* FR-3.5 detail drawer: gloss + linked deck/task ids + neighbors. */}

@@ -2,6 +2,10 @@
 
 Each test uses its OWN fresh user so chat-created plans/roadmaps never leak
 between tests (the seeded fixture user keeps its §4.6 state for review tests).
+
+P1: chat big-task/direct-fishboat paths call the LLM (planner, supervisor,
+roadmap narration). Only the OpenRouter HTTP boundary is mocked (§6.5) via
+the `openrouter_stub` fixture — every chat/plan test declares it.
 """
 
 import json
@@ -10,6 +14,8 @@ from typing import Any, cast
 
 import pytest
 from httpx import AsyncClient
+
+from tests.conftest import OpenRouterHttpMock
 
 
 def uid() -> str:
@@ -29,7 +35,7 @@ async def _chat(client: AsyncClient, user: str, message: str) -> dict[str, Any]:
 
 @pytest.mark.asyncio
 async def test_big_task_offers_tour_and_persists_plan(
-    client: AsyncClient, live_client: AsyncClient
+    client: AsyncClient, live_client: AsyncClient, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     user = uid()
     r = await _chat(client, user, "I'm afraid of revising thermodynamics")
@@ -79,7 +85,7 @@ async def test_big_task_offers_tour_and_persists_plan(
 
 @pytest.mark.asyncio
 async def test_dismiss_clears_pending_offer_and_replay_restarts(
-    client: AsyncClient,
+    client: AsyncClient, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     user = uid()
     r = await _chat(client, user, "help me plan my physics revision")
@@ -103,7 +109,7 @@ async def test_dismiss_clears_pending_offer_and_replay_restarts(
 
 @pytest.mark.asyncio
 async def test_tour_endpoints_404_for_unknown_or_foreign_roadmaps(
-    client: AsyncClient,
+    client: AsyncClient, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     user = uid()
     r = await _chat(client, user, "thermodynamics")
@@ -135,7 +141,11 @@ async def test_tour_endpoints_404_for_unknown_or_foreign_roadmaps(
     ],
 )
 async def test_direct_zones_never_offer_tours(
-    client: AsyncClient, message: str, route: str, plan_expected: bool
+    client: AsyncClient,
+    openrouter_stub: OpenRouterHttpMock,
+    message: str,
+    route: str,
+    plan_expected: bool,
 ) -> None:
     user = uid()
     r = await _chat(client, user, message)
@@ -166,7 +176,9 @@ async def test_chitchat_gets_a_warm_line_and_nothing_else(
 
 
 @pytest.mark.asyncio
-async def test_post_plan_endpoint_persists_and_validates(client: AsyncClient) -> None:
+async def test_post_plan_endpoint_persists_and_validates(
+    client: AsyncClient, openrouter_stub: OpenRouterHttpMock
+) -> None:
     user = uid()
     resp = await client.post(
         "/agents/scheduler/plan",
@@ -193,7 +205,7 @@ async def test_post_plan_endpoint_persists_and_validates(client: AsyncClient) ->
 
 @pytest.mark.asyncio
 async def test_complete_task_writes_record_once_and_glows(
-    client: AsyncClient, live_client: AsyncClient
+    client: AsyncClient, live_client: AsyncClient, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     user = uid()
     plan = (

@@ -5,6 +5,8 @@ tour_offer; these endpoints are the user's answer — start ("Begin tour"),
 dismiss ("Not now"), replay (the always-visible "?" button).
 """
 
+import logging
+
 from fastapi import APIRouter
 from sqlalchemy import select
 
@@ -12,8 +14,11 @@ from app import models as m
 from app import schemas as s
 from app.agents.orchestrator.service import ChatRequest, ChatResponse, handle_chat
 from app.api.deps import CurrentUser, SessionDep
+from app.core import llm
 from app.core.errors import AppError
 from app.services import outbox
+
+logger = logging.getLogger("enjoy.api.chat")
 
 router = APIRouter()
 
@@ -58,7 +63,26 @@ async def _user_roadmap(
 async def post_chat(
     body: ChatRequest, session: SessionDep, user: CurrentUser
 ) -> ChatResponse:
-    response = await handle_chat(session, user, body.message)
+    try:
+        response = await handle_chat(session, user, body.message)
+    except llm.LLMError as exc:
+        # Agent failure during an active workflow (§5.2): SSE error event
+        # (committed) PLUS the error envelope — never a canned plan (§3.4).
+        logger.error("chat workflow failed: %s", exc)
+        await outbox.emit(
+            session,
+            user.id,
+            [outbox.error("The harbour's planners could not reach the LLM this "
+                          "time. Nothing was lost — try again when ready.")],
+        )
+        await session.commit()
+        raise AppError(
+            502,
+            "LLM_UNAVAILABLE",
+            "The harbour could not reach the LLM right now.",
+            detail={"reason": str(exc)[:500]},
+            recoverable=True,
+        ) from exc
     await session.commit()
     return response
 

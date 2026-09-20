@@ -1,14 +1,18 @@
 """pytest harness — the real app against the real Postgres (AGENTS.md §6.3).
 
 NEVER SQLite: dialect differences are where silent failures breed. Tests run
-against a dedicated database ``harbour_test`` on the SAME local Postgres
-server as development (hackathon pragmatism — monitor-approved, recorded in
-docs/sessions/014). Per test session it is dropped, recreated, and migrated
-with ``alembic upgrade head``, so tests always run against the real, current
-Alembic-owned schema — never ``metadata.create_all`` (AGENTS.md §5.2).
+against a dedicated database on the SAME local Postgres server as development
+(hackathon pragmatism — monitor-approved, recorded in docs/sessions/014).
+Per pytest PROCESS the database is ``harbour_test_<pid>``: dropped, recreated,
+and migrated with ``alembic upgrade head`` at session start, and dropped
+again at session end. The per-process suffix fixes the documented
+shared-test-DB hazard (session 018: two simultaneous pytest runs destroy each
+other's shared ``harbour_test`` — observed live in session 026 when a zombie
+pytest process from a timed-out run kept recreating it mid-suite). Tests always run against the real, current Alembic-owned
+schema — never ``metadata.create_all`` (AGENTS.md §5.2).
 
-How it works: the session fixture repoints ``DATABASE_URL`` to
-``harbour_test`` for the whole session *before* the app is imported, then
+How it works: the session fixture repoints ``DATABASE_URL`` to the per-process
+test database for the whole session *before* the app is imported, then
 yields. Every test that touches the app uses the fixtures below:
 
 - ``client`` — httpx.AsyncClient through the real ASGI app (no server).
@@ -23,16 +27,18 @@ yields. Every test that touches the app uses the fixtures below:
 """
 
 import asyncio
+import json
 import os
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
-TEST_DB_NAME = "harbour_test"
+TEST_DB_NAME = f"harbour_test_{os.getpid()}"  # per-process — see module docstring
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
@@ -42,6 +48,16 @@ async def _recreate_test_database(admin_url: str) -> None:
     async with engine.connect() as conn:
         await conn.execute(text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}" WITH (FORCE)'))
         await conn.execute(text(f'CREATE DATABASE "{TEST_DB_NAME}"'))
+    await engine.dispose()
+
+
+async def _drop_test_database(admin_url: str) -> None:
+    """Drop this process's test database (autocommit; cannot run in a txn)."""
+    engine = create_async_engine(admin_url, isolation_level="AUTOCOMMIT")
+    async with engine.connect() as conn:
+        await conn.execute(
+            text(f'DROP DATABASE IF EXISTS "{TEST_DB_NAME}" WITH (FORCE)')
+        )
     await engine.dispose()
 
 
@@ -56,8 +72,10 @@ def _run_alembic_upgrade_head() -> None:
 
 
 @pytest.fixture(scope="session")
-def _test_database() -> str:
-    """Session-scoped: fresh, migrated ``harbour_test``; returns its URL."""
+def _test_database() -> Iterator[str]:
+    """Session-scoped: fresh, migrated per-process test DB; returns its URL.
+
+    Dropped on teardown so concurrent suites leave no orphans behind."""
     from sqlalchemy.engine import make_url
 
     from app.core.config import get_settings
@@ -76,7 +94,10 @@ def _test_database() -> str:
     get_settings.cache_clear()
 
     _run_alembic_upgrade_head()
-    return test_url
+    try:
+        yield test_url
+    finally:
+        asyncio.run(_drop_test_database(dev_url))
 
 
 @pytest.fixture(scope="session")
@@ -168,8 +189,197 @@ async def live_server(_test_database: str) -> AsyncIterator[str]:
         AppStatus.should_exit_event = None
 
 
+@pytest.fixture(autouse=True)
+def _fresh_llm_client() -> None:
+    """Reset the lru_cached ChatOpenAI between tests: its internal httpx2
+    client pools connections bound to the creating event loop, and
+    pytest-asyncio gives each test a fresh loop (same reason the DB engine is
+    disposed per test). Test-side reset; production code stays clean."""
+    from app.core import llm
+
+    llm._client.cache_clear()
+
+
 @pytest.fixture
 async def live_client(live_server: str) -> AsyncIterator[AsyncClient]:
     """HTTP client against the live test server (default 5s timeout = hang-guard)."""
     async with AsyncClient(base_url=live_server) as async_client:
         yield async_client
+
+
+# ── OpenRouter HTTP-boundary mock (AGENTS.md §6.5) ───────────────────────────
+# The ONLY thing tests may mock is the true externality: the OpenRouter HTTP
+# call. The openai SDK (3.16+) speaks `httpx2` (a fork respx 0.23 cannot see),
+# so tests patch the httpx2 async transport method directly — the exact seam
+# where bytes would leave the machine. Nothing inside our code is mocked.
+
+import httpx2  # noqa: E402
+
+
+def openrouter_tool_response(
+    schema_name: str, arguments: dict[str, Any], *, status: int = 200
+) -> httpx2.Response:
+    """Build a well-formed OpenAI function-calling completion carrying
+    `arguments` as the structured tool-call payload for `schema_name`."""
+    if status != 200:
+        return httpx2.Response(status, json={"error": {"message": "boom"}})
+    return httpx2.Response(
+        200,
+        json={
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": 0,
+            "model": "deepseek/deepseek-v4.1-flash",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {
+                                    "name": schema_name,
+                                    "arguments": json.dumps(arguments),
+                                },
+                            }
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        },
+    )
+
+
+class OpenRouterHttpMock:
+    """Records requests; `handler` decides the response. A test that forgets
+    to set a handler gets a loud AssertionError, never a silent answer."""
+
+    def __init__(self) -> None:
+        self.requests: list[httpx2.Request] = []
+        self.handler: Callable[[httpx2.Request], httpx2.Response] = (
+            self._unconfigured
+        )
+
+    @staticmethod
+    def _unconfigured(request: httpx2.Request) -> httpx2.Response:
+        raise AssertionError(
+            "openrouter_http handler not set — a test reached the OpenRouter "
+            "boundary without declaring the expected response."
+        )
+
+    def tool_name(self, index: int = -1) -> str:
+        """The structured-output schema name requested by call `index`."""
+        body = json.loads(self.requests[index].content)
+        return str(body["tools"][0]["function"]["name"])
+
+
+@pytest.fixture
+def openrouter_http(monkeypatch: pytest.MonkeyPatch) -> OpenRouterHttpMock:
+    mock = OpenRouterHttpMock()
+
+    async def _handle(
+        self: httpx2.AsyncHTTPTransport, request: httpx2.Request
+    ) -> httpx2.Response:
+        mock.requests.append(request)
+        response = mock.handler(request)
+        response.request = request  # raise_for_status needs the request bound
+        return response
+
+    monkeypatch.setattr(
+        httpx2.AsyncHTTPTransport, "handle_async_request", _handle
+    )
+    return mock
+
+
+# ── generic valid-response stub for every P1 LLM tool ─────────────────────────
+# Dispatches on the requested structured-output tool name and returns a VALID
+# payload for it. Tests that need specific output reassign `.handler`
+# themselves. A tool this stub doesn't know fails loudly (AssertionError).
+
+import re  # noqa: E402
+
+_STUB_EMPATHY = "That feels big right now — we'll take it one small step at a time."
+
+
+def _stub_goal(user_msg: str) -> str:
+    match = re.search(r"Message:\s*(.+)", user_msg, re.DOTALL)
+    goal = (match.group(1) if match else user_msg).strip()
+    return goal[:60]
+
+
+def _stub_tasks(user_msg: str) -> list[dict[str, object]]:
+    match = re.search(r"Produce exactly (\d+) tasks", user_msg)
+    assert match, f"TaskBreakdown prompt missing target count: {user_msg!r}"
+    count = int(match.group(1))
+    verbs = ["Map", "List", "Explain", "Practice", "Recall", "Summarize"]
+    return [
+        {
+            "title": f"{verbs[i % len(verbs)]} step {i + 1} of the goal",
+            "description": f"Do step {i + 1} in one focused sitting.",
+            "estimateMinutes": 20,
+            "difficulty": 1 + (i % 5),
+        }
+        for i in range(count)
+    ]
+
+
+_STUB_NARRATIONS = [
+    "This is your fishboat — today's plan lives here.",
+    "The small boats carry your flashcard decks.",
+    "Below the surface, your knowledge atlas glows.",
+    "The lamp keeps every victory, warmly.",
+]
+
+
+def _stub_arguments(tool_name: str, user_msg: str) -> dict[str, object]:
+    if tool_name == "GoalExtraction":
+        return {"goal": _stub_goal(user_msg), "empathyLine": _STUB_EMPATHY}
+    if tool_name == "TaskBreakdown":
+        return {"tasks": _stub_tasks(user_msg)}
+    if tool_name == "RoadmapNarration":
+        return {"narrations": list(_STUB_NARRATIONS)}
+    if tool_name == "SupervisorDecision":
+        return {"route": "big_task", "zone": None, "reason": "stub default"}
+    if tool_name == "ChunkCards":
+        return {
+            "cards": [
+                {
+                    "question": "What is the core concept of this chunk?",
+                    "answer": "The core concept is the main idea of the chunk text.",
+                    "sourceSnippet": "core concept",
+                }
+            ]
+        }
+    if tool_name == "ChunkGraph":
+        return {
+            "nodes": [
+                {"label": "Core Concept", "type": "Concept", "gloss": "Main idea."}
+            ],
+            "edges": [],
+        }
+    raise AssertionError(f"openrouter_stub: unstubbed tool {tool_name!r}")
+
+
+@pytest.fixture
+def openrouter_stub(openrouter_http: OpenRouterHttpMock) -> OpenRouterHttpMock:
+    """All-tools-valid stub. Tests override with `openrouter_http.handler = …`
+    or by wrapping this handler."""
+
+    def handler(request: httpx2.Request) -> httpx2.Response:
+        body = json.loads(request.content)
+        tool_name = body["tools"][0]["function"]["name"]
+        user_msg = next(
+            (m["content"] for m in reversed(body["messages"]) if m["role"] == "user"),
+            "",
+        )
+        return openrouter_tool_response(
+            tool_name, _stub_arguments(tool_name, user_msg)
+        )
+
+    openrouter_http.handler = handler
+    return openrouter_http

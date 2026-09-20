@@ -11,7 +11,8 @@
  *   down (§7.2). Not dismissible — it clears itself on reconnect.
  */
 
-import { LABEL, PALETTE } from "@/lib/theme";
+import { CHROME, PALETTE } from "@/lib/theme";
+import ChromeButton from "./ChromeButton";
 import { useUiStore } from "./uiStore";
 
 export default function Banners() {
@@ -28,27 +29,20 @@ export default function Banners() {
           role="alert"
           className="flex items-center gap-3 rounded-full px-4 py-2 text-sm font-semibold"
           style={{
-            background: LABEL.fill,
-            color: LABEL.text,
-            boxShadow: LABEL.shadow,
+            background: PALETTE.chromeCream.hex,
+            color: PALETTE.chromeInk.hex,
+            boxShadow: CHROME.shadowCard,
             border: `2px solid ${PALETTE.softAmber.hex}`,
           }}
         >
           <span>{errorMessage}</span>
-          <button
-            type="button"
+          <ChromeButton
             aria-label="Dismiss error"
             onClick={() => setError(null)}
-            className="rounded-full px-2 py-0.5 text-xs"
-            style={{
-              background: "transparent",
-              color: LABEL.text,
-              border: "none",
-              cursor: "pointer",
-            }}
+            style={{ padding: "2px 10px" }}
           >
             ✕
-          </button>
+          </ChromeButton>
         </div>
       )}
       {offline && (
@@ -56,9 +50,9 @@ export default function Banners() {
           role="status"
           className="flex items-center gap-2 rounded-full px-4 py-2 text-sm"
           style={{
-            background: LABEL.fill,
-            color: LABEL.text,
-            boxShadow: LABEL.shadow,
+            background: PALETTE.chromeCream.hex,
+            color: PALETTE.chromeInk.hex,
+            boxShadow: CHROME.shadowCard,
           }}
         >
           <span

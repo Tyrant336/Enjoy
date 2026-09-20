@@ -58,9 +58,10 @@ atlas 48 nodes/96 edges 60fps, node drawer, dive/surface, L-key toggle.
   band weakened; `HarbourCanvas` — fog `(MIST_COLOR, 80, 700)`, camera far
   3000. Verified: `.labshots/vc-01..04-*.png` (driver `.labshots/vc-shots.mjs`)
   — overview/topdown/fishboat/lamp, NO band at the distance in any.
-- Reflections: `modelUtils.makeReflection` now a depth-fade shader
-  (crisp at waterline, dissolves ~1 object-height, elongation scale.y=-1.22;
-  opacities fishboat .55 / lamp .6 / smallboats .45). Visible in vc-01/03/04.
+- Reflections: REPLACED in session 028 — the ocean is now a true planar
+  mirror (three's Reflector + the custom water shader in `Ocean.tsx`);
+  `modelUtils.makeReflection` (mirrored clones) was deleted. Do not
+  re-introduce mirrored-geometry reflections.
 - §2.6 camera: presets in `layout.ts` — overview (raised oblique eye, horizon
   measured 43–48% ✓ within band), topdown, fishboat-centric, lamp-centric,
   fleet, underwater, review. Free orbit via camera-controls

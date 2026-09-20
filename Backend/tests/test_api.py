@@ -158,3 +158,51 @@ async def test_first_seen_user_is_upserted(
         await db_session.execute(select(m.User).where(m.User.id == user_id))
     ).scalar_one()
     assert row.timezone == "Europe/London"
+
+
+# ── PUT /api/preferences (§5.2) ──────────────────────────────────────────────
+
+
+async def test_put_preferences_roundtrip(
+    client: AsyncClient, db_session: AsyncSession
+) -> None:
+    user_id = f"test-{uuid.uuid4()}"
+    headers = {"X-Harbour-User-Id": user_id, "X-Harbour-Timezone": "UTC"}
+    resp = await client.put(
+        "/api/preferences",
+        headers=headers,
+        json={"labelsVisible": False, "reducedMotion": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {
+        "timezone": "UTC",
+        "labelsVisible": False,
+        "reducedMotion": True,
+    }
+    # Persisted server-side: world-state reflects the same prefs (FR §7.4).
+    state = await client.get("/api/world-state", headers=headers)
+    assert state.status_code == 200
+    assert state.json()["user"] == body
+    row = (
+        await db_session.execute(select(m.User).where(m.User.id == user_id))
+    ).scalar_one()
+    assert row.prefs == {"labelsVisible": False, "reducedMotion": True}
+
+    # Partial update: timezone only; the stored booleans survive untouched.
+    resp = await client.put(
+        "/api/preferences", headers=headers, json={"timezone": "Asia/Shanghai"}
+    )
+    assert resp.status_code == 200
+    assert resp.json() == {
+        "timezone": "Asia/Shanghai",
+        "labelsVisible": False,
+        "reducedMotion": True,
+    }
+
+    # Invalid timezone → §5.2 envelope, never silent.
+    resp = await client.put(
+        "/api/preferences", headers=headers, json={"timezone": "Mars/Olympus"}
+    )
+    assert resp.status_code == 400
+    assert resp.json()["code"] == "INVALID_TIMEZONE"

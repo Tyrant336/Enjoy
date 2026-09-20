@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import models as m
 from app.schemas import KnowledgeGraph, Roadmap, WorldState
+from tests.conftest import OpenRouterHttpMock
 
 # ── §8.1 — services start; seeded world state is complete and consistent ────
 # (Visual half — fishboat/lamp/fleet render, palette §2.4 — is Agent T's.)
@@ -69,7 +70,7 @@ async def _outbox_types(db_session: AsyncSession, user_id: str) -> list[str]:
 
 
 async def test_step2_big_task_offers_tour_never_forced(
-    client: AsyncClient, db_session: AsyncSession
+    client: AsyncClient, db_session: AsyncSession, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     uid = f"e2e-chat-{uuid.uuid4().hex[:8]}"
     headers = {"X-Harbour-User-Id": uid}
@@ -171,13 +172,15 @@ async def test_step3_review_loop_persists_grades(
     assert (p1["graded"], p1["remaining"]) == (1, 2)
     assert p1["nextCard"]["id"] == c2
 
-    # Grade persisted immediately (FR-2.5.5): due moved +3 days (FR-2.8 P0).
+    # Grade persisted immediately (FR-2.5.5): due moved forward and the card
+    # gained real FSRS memory (FR-2.8 P1 — py-fsrs; P0 fixed intervals gone).
     card_row = (
         await db_session.execute(select(m.Flashcard).where(m.Flashcard.id == c1))
     ).scalar_one()
     await db_session.refresh(card_row)  # bypass this session's identity map
-    assert card_row.due > datetime.now(UTC) + timedelta(days=2)
+    assert card_row.due > datetime.now(UTC)
     assert card_row.fsrs["reps"] == 1
+    assert card_row.fsrs["stability"] is not None
 
     # FR-2.9: "Again" schedules sooner but does NOT re-show the card in-session.
     grade2 = await client.post(
@@ -340,7 +343,7 @@ async def test_step5_atlas_serves_seeded_graph(
 
 
 async def test_step6_direct_zone_requests_never_offer_tour(
-    client: AsyncClient, db_session: AsyncSession
+    client: AsyncClient, db_session: AsyncSession, openrouter_stub: OpenRouterHttpMock
 ) -> None:
     uid = f"e2e-zones-{uuid.uuid4().hex[:8]}"
     headers = {"X-Harbour-User-Id": uid}

@@ -16,11 +16,15 @@
  */
 
 import type {
+  Deck,
   Flashcard,
+  KGLink,
+  KGNode,
   Roadmap,
   StudyPlan,
   StudyTask,
   WorldState,
+  WorldUser,
   Record as HarbourRecord,
 } from "@/lib/types";
 import { harbourFetch, HarbourApiError } from "./api";
@@ -56,6 +60,16 @@ export type RevealResponse = { cardId: string; answer: string };
 export type GradeResponse = { card: Flashcard; deckProgress: DeckProgress };
 
 export type TaskCompleteResponse = { task: StudyTask; record: HarbourRecord };
+
+/** POST /agents/kg/build payload (endpoint shape — not the frozen contract). */
+export type KgBuildResponse = {
+  nodes: KGNode[];
+  links: KGLink[];
+  fallbackUsed: "keybert" | null;
+};
+
+/** One upload = the SAME file to BOTH agent endpoints (handoff §5 step 3.3). */
+export type UploadResult = { deck: Deck; kg: KgBuildResponse };
 
 /* ── shared helpers ─────────────────────────────────────────────────────── */
 
@@ -196,6 +210,70 @@ export async function exitReview(deckId: string): Promise<void> {
     if (!useUiStore.getState().busConnected) await refreshWorldState();
   } catch (err) {
     reportError(err);
+  }
+}
+
+/* ── upload (FR-2.1/FR-3.1 — one document, two agent calls) ─────────────── */
+
+/** Stage labels the ChatPanel shows while an upload is in flight. */
+export type UploadStage = "reading" | "cards" | "atlas";
+
+/**
+ * Upload one document: flashcard deck generation THEN knowledge-graph build
+ * (sequential — the deck boat is the primary promise; an atlas failure after
+ * a successful deck still surfaces as its own loud error). `onStage` reports
+ * the calm staged-loading copy. Returns null on failure (already reported).
+ */
+export async function uploadDocument(
+  file: File,
+  deckName: string,
+  onStage?: (stage: UploadStage) => void,
+): Promise<UploadResult | null> {
+  const bodyFor = () => {
+    const form = new FormData();
+    form.set("file", file, file.name);
+    return form;
+  };
+  try {
+    onStage?.("cards");
+    const deckForm = bodyFor();
+    deckForm.set("deck_name", deckName);
+    const deck = await harbourFetch<Deck>("/agents/flashcards/generate", {
+      method: "POST",
+      body: deckForm,
+    });
+    onStage?.("atlas");
+    const kg = await harbourFetch<KgBuildResponse>("/agents/kg/build", {
+      method: "POST",
+      body: bodyFor(),
+    });
+    return { deck, kg };
+  } catch (err) {
+    reportError(err); // server `message` verbatim in the soft-amber banner
+    return null;
+  }
+}
+
+/* ── preferences (§5.2 PUT /api/preferences) ──────────────────────────────── */
+
+/**
+ * Persist user prefs (reducedMotion / labelsVisible / timezone). The caller
+ * keeps its local state on failure — this only surfaces the soft-amber
+ * banner (never silent) and returns null.
+ */
+export async function updatePreferences(prefs: {
+  timezone?: string;
+  reducedMotion?: boolean;
+  labelsVisible?: boolean;
+}): Promise<WorldUser | null> {
+  try {
+    return await harbourFetch<WorldUser>("/api/preferences", {
+      method: "PUT",
+      body: JSON.stringify(prefs),
+    });
+  } catch (err) {
+    reportError(err);
+    return null;
   }
 }
 

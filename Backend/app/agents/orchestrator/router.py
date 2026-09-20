@@ -1,8 +1,10 @@
 """Deterministic pre-router — FR-0.3. THE ONE router (no second anywhere).
 
-P0 contract (FR-0): routing is a cheap deterministic keyword/rule pre-router.
-The LLM supervisor fallback for ambiguous messages is P1 — in P0 this module
-IS the whole routing decision (one path, AGENTS.md §3).
+Routing is a cheap deterministic keyword/rule pre-router; the LLM supervisor
+fallback node in the orchestrator graph (P1, FR-0.3) is consulted ONLY when
+this module reports the message ambiguous (0 zones and not chitchat, or one
+zone plus substantial residual learning content — eval defects D3/D4,
+session 025). One graph, one path; no parallel routers.
 
 Rules (REQUIREMENTS FR-0.1 / FR-0.2):
 - A message naming exactly ONE zone → that zone's agent only, NEVER a tour.
@@ -15,10 +17,8 @@ Rules (REQUIREMENTS FR-0.1 / FR-0.2):
   defines big tasks as naming a topic "without naming a single zone", so
   "fishboat schedule" is still a direct-zone request. Naming ≥2 zones is not
   a direct-zone request → big task (the pipeline touches every zone anyway).
-- Anything else that is not bare chitchat (a greeting/acknowledgement) is a
-  big task (P0 treats content words as a topic until the P1 LLM supervisor
-  refines this, FR-0.3). Chitchat → a warm narration, never a fake plan.
-  Empty messages are rejected upstream (422), never reach here.
+- Bare chitchat (a greeting/acknowledgement) → a warm narration, never a fake
+  plan. Empty messages are rejected upstream (422), never reach here.
 """
 
 import re
@@ -81,6 +81,13 @@ _ZONE_PHRASES: dict[Zone, frozenset[str]] = {
     Zone.LAMP: frozenset({"light buoy", "lamp buoy"}),
 }
 
+# Filler words stripped when measuring residual learning content.
+_FILLER = frozenset({
+    "i", "me", "my", "and", "the", "a", "an", "to", "please", "can", "could",
+    "you", "for", "it", "of", "on", "in", "so", "just", "really",
+})
+
+
 def _normalize(message: str) -> str:
     """Lowercase, apostrophes dropped ("don't"→"dont"), punctuation → spaces."""
     text = message.strip().lower().replace("'", "").replace("\u2019", "")
@@ -102,8 +109,8 @@ _CHITCHAT = frozenset({
 })
 
 
-def route_message(message: str) -> RouteDecision:
-    """Route one chat message. Pure — no I/O, no clock, fully deterministic."""
+def _analyze(message: str) -> tuple[RouteDecision, frozenset[Zone], frozenset[str]]:
+    """Route + the evidence behind it (zones hit, residual content words)."""
     normalized = _normalize(message)
     words = _words(normalized)
 
@@ -118,18 +125,75 @@ def route_message(message: str) -> RouteDecision:
             if re.search(pattern, unclaimed):
                 zones_hit.add(zone)
                 unclaimed = re.sub(pattern, " ", unclaimed)
+    zone_words: set[str] = set()
     for zone, keywords in _ZONE_KEYWORDS.items():
-        if _words(unclaimed) & keywords:
+        hits = _words(unclaimed) & keywords
+        if hits:
             zones_hit.add(zone)
+            zone_words |= hits
+
+    # Residual = words that are neither zone vocabulary nor filler — the
+    # "learning content" left over (drives the supervisor trigger, D3/D4).
+    residual = frozenset(_words(unclaimed) - zone_words - _FILLER)
 
     if len(zones_hit) == 1:
-        return RouteDecision(Route.DIRECT_ZONE, next(iter(zones_hit)))
-    # ≥2 zones is not "a single zone" (FR-0.2) → big task. 0 zones: big task
-    # when any FR-0.2 clause hits (topic/emotion/plan-ask — P0 treats any
-    # non-chitchat content words as a topic); otherwise a warm narrate.
-    if words and words <= _CHITCHAT:
-        return RouteDecision(Route.NARRATE, None)
-    return RouteDecision(Route.BIG_TASK, None)
+        decision = RouteDecision(Route.DIRECT_ZONE, next(iter(zones_hit)))
+    elif words and words <= _CHITCHAT:
+        decision = RouteDecision(Route.NARRATE, None)
+    else:
+        # ≥2 zones is not "a single zone" (FR-0.2) → big task. 0 zones with
+        # any non-chitchat content → big task (supervisor may refine, FR-0.3).
+        decision = RouteDecision(Route.BIG_TASK, None)
+    return decision, frozenset(zones_hit), residual
 
 
-__all__ = ["Route", "RouteDecision", "Zone", "route_message"]
+class RouteAnalysis:
+    """The deterministic route PLUS its evidence — what the orchestrator
+    graph needs to decide whether the LLM supervisor must be consulted."""
+
+    def __init__(
+        self,
+        decision: RouteDecision,
+        zones: frozenset[Zone],
+        residual: frozenset[str],
+    ) -> None:
+        self.decision = decision
+        self.zones = zones
+        self.residual = residual
+
+    @property
+    def ambiguous(self) -> bool:
+        """FR-0.3/handoff §3.4: the LLM supervisor is consulted ONLY for the
+        ambiguous case —
+        - 0 zones hit and not pure chitchat (the message COULD be a big task,
+          but the deterministic rules cannot tell a topic from a request);
+        - exactly 1 zone hit but substantial residual learning content
+          remains (e.g. "help me understand photosynthesis AND drill my
+          flashcards" — the zone alone would drop the topic, D4).
+        """
+        if self.decision.route is Route.BIG_TASK and not self.zones:
+            return True
+        if self.decision.route is Route.DIRECT_ZONE and len(self.residual) >= 3:
+            return True
+        return False
+
+
+def analyze_message(message: str) -> RouteAnalysis:
+    """The full deterministic analysis (routing evidence included)."""
+    decision, zones, residual = _analyze(message)
+    return RouteAnalysis(decision, zones, residual)
+
+
+def route_message(message: str) -> RouteDecision:
+    """Route one chat message. Pure — no I/O, no clock, fully deterministic."""
+    return _analyze(message)[0]
+
+
+__all__ = [
+    "Route",
+    "RouteAnalysis",
+    "RouteDecision",
+    "Zone",
+    "analyze_message",
+    "route_message",
+]

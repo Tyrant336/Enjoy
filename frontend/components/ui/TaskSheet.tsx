@@ -15,7 +15,8 @@
  */
 
 import { useEffect } from "react";
-import { LABEL, PALETTE } from "@/lib/theme";
+import { CHROME, PALETTE } from "@/lib/theme";
+import ChromeButton from "./ChromeButton";
 import { completeTask } from "./actions";
 import { getHarbourIdentity } from "./identity";
 import { useUiStore } from "./uiStore";
@@ -59,11 +60,12 @@ export default function TaskSheet() {
         role="dialog"
         aria-modal="true"
         aria-label="Today's tasks"
-        className="w-full max-w-md rounded-3xl px-6 py-5"
+        className="w-full max-w-md px-6 py-5"
         style={{
-          background: PALETTE.mist.hex,
-          color: PALETTE.ink.hex,
-          boxShadow: LABEL.shadow,
+          background: PALETTE.chromeCream.hex,
+          color: PALETTE.chromeInk.hex,
+          borderRadius: CHROME.radiusCard,
+          boxShadow: CHROME.shadowCard,
         }}
       >
         {/* FR-1.6.2: the plan's empathy line leads — warmth before tasks. */}
@@ -94,25 +96,22 @@ export default function TaskSheet() {
                     >
                       {task.title}
                     </p>
-                    <p className="text-xs opacity-70">
+                    <p
+                      className="text-xs uppercase opacity-70"
+                      style={{ letterSpacing: ".08em", fontWeight: 600, fontSize: 12 }}
+                    >
                       {task.estimateMinutes} min
                       {task.slot ? ` · ${task.slot}` : ""}
                     </p>
                   </div>
-                  <button
-                    type="button"
+                  <ChromeButton
+                    accent="sage"
                     disabled={done}
                     onClick={() => void completeTask(task.id)}
-                    className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50"
-                    style={{
-                      background: PALETTE.waterDeep.hex,
-                      color: PALETTE.mist.hex,
-                      border: "none",
-                      cursor: done ? "default" : "pointer",
-                    }}
+                    className="shrink-0"
                   >
                     Done
-                  </button>
+                  </ChromeButton>
                 </li>
               );
             })}
@@ -127,20 +126,9 @@ export default function TaskSheet() {
         )}
 
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-            style={{
-              background: LABEL.fill,
-              color: LABEL.text,
-              boxShadow: LABEL.shadow,
-              border: `1px solid ${PALETTE.ink.hex}33`,
-              cursor: "pointer",
-            }}
-          >
+          <ChromeButton onClick={() => setOpen(false)}>
             Return to harbour (Esc)
-          </button>
+          </ChromeButton>
         </div>
       </div>
     </div>

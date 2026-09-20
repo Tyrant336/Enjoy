@@ -1,0 +1,42 @@
+Photosynthesis and Cellular Respiration - Study Notes
+Biology 101, Week 4. Key definitions, formulas and processes.
+
+1. Core Definitions
+Photosynthesis: the process by which green plants, algae and some
+bacteria convert light energy into chemical energy stored in glucose.
+Chlorophyll: the green pigment in chloroplasts that absorbs light,
+mainly in the blue and red wavelengths; reflects green.
+Stomata: pores on the leaf underside that regulate gas exchange.
+ATP (adenosine triphosphate): the cell's main energy currency.
+NADPH: electron carrier produced in the light reactions.
+Calvin cycle: the light-independent reactions that fix CO2 into sugar.
+
+2. The Master Equation
+6 CO2 + 6 H2O + light energy -> C6H12O6 + 6 O2
+Carbon dioxide + water, powered by light, yield glucose and oxygen.
+
+3. Two Stages of Photosynthesis
+Stage A - Light reactions (thylakoid membranes):
+  - Light splits water (photolysis), releasing O2.
+  - Electron transport chain builds ATP and NADPH.
+Stage B - Calvin cycle (stroma):
+  - Carbon fixation: RuBisCO attaches CO2 to RuBP.
+  - Reduction: ATP and NADPH convert 3-PGA into G3P.
+  - Regeneration: RuBP is rebuilt so the cycle can continue.
+
+4. Cellular Respiration - the mirror process
+C6H12O6 + 6 O2 -> 6 CO2 + 6 H2O + ATP (about 30-32 ATP per glucose)
+Glycolysis (cytoplasm) -> Krebs cycle (mitochondrial matrix) ->
+oxidative phosphorylation (inner mitochondrial membrane).
+
+5. Frequently Confused Pairs
+Chlorophyll vs chloroplast: pigment vs organelle.
+Light reactions vs Calvin cycle: energy capture vs carbon fixation.
+Aerobic vs anaerobic respiration: with vs without oxygen.
+
+6. Practice Questions
+Q1. Where exactly does the Calvin cycle take place?
+Q2. Which molecule is both a reactant of respiration and a product
+of photosynthesis? (Hint: there are two correct answers.)
+Q3. Explain why the light reactions stop within seconds in the dark
+while the Calvin cycle can continue briefly.

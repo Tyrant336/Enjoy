@@ -9,13 +9,29 @@ dependencies = [
     "sqlalchemy[asyncio]==2.0.36",
     "asyncpg==0.30.0",
     "alembic==1.14.0",
-    "pydantic==2.9.2",
-    "pydantic-settings==2.6.1",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
     "sse-starlette==2.2.1",
     "python-multipart==0.0.20",
     # IANA tz database for zoneinfo — required on Windows (no system tzdata);
     # "today"/due-cards/days-active are user-timezone-aware (REQUIREMENTS §4.4, FR-4.2).
     "tzdata==2025.2",
+    # P1 (REQUIREMENTS §0.2): the ONE OpenRouter LLM client (app/core/llm.py)
+    # is built on langchain-openai; LangGraph hosts the ingestion→generation
+    # graphs and the scheduler plan-execute-replan internals (FR-1.5 P1).
+    "langchain-openai==1.6.2",
+    "langgraph==1.2.11",
+    # Shared ingestion pipeline (FR-2.1/FR-3.1): PDFs are parsed to TEXT by
+    # Docling; the LLM receives extracted text, never page images.
+    # Requires pydantic >= 2.10 (2.9.x crashes docling model registration).
+    "docling==2.129.0",
+    # FR-2.3 .apkg export at generation time.
+    "genanki==0.13.1",
+    # FR-2.8 P1: real FSRS scheduling (PyPI name is `fsrs`, project: py-fsrs).
+    "fsrs==6.3.2",
+    # FR-3.2: the ONLY sanctioned fallback — KeyBERT extraction when LLM
+    # extraction fails (WARNING log + fallbackUsed in the response).
+    "keybert==0.9.0",
 ]
 
 [dependency-groups]

@@ -161,23 +161,39 @@ async def test_start_review_with_nothing_due_is_warm_not_error(
 
 
 @pytest.mark.asyncio
-async def test_p0_intervals_are_exact(client: AsyncClient, seeded_user_id: str) -> None:
-    """FR-2.8: Again=5min, Hard=+1d, Good=+3d, Easy=+7d (±2 min clock slack)."""
+async def test_fsrs_scheduling_semantics(
+    client: AsyncClient, seeded_user_id: str
+) -> None:
+    """FR-2.8 P1: real py-fsrs drives scheduling (the P0 fixed-interval map is
+    gone). Semantics asserted, not magic numbers:
+    - every grade moves `due` into the future and bumps reps;
+    - again < good < easy ordering on the next-due delta;
+    - easy graduates the card out of the same-minute learning steps (≥1 day);
+    - the stored state gains real FSRS memory (stability/difficulty)."""
     uid = seeded_user_id
     from datetime import UTC, datetime
 
-    async def due_after(card_id: str, rating: str) -> float:
+    async def grade_delta(card_id: str, rating: str) -> tuple[float, dict[str, Any]]:
         now = datetime.now(UTC).timestamp()
         g = await _post(client, uid, "/agents/flashcards/review/grade",
                         {"cardId": card_id, "rating": rating})
         due = datetime.fromisoformat(g["card"]["due"]).timestamp()
-        return due - now
+        return due - now, g["card"]["fsrsState"]
 
-    # re-review sessions after each completion are fine — each grade's due
-    # delta must match its P0 interval regardless of session boundaries.
-    assert abs(await due_after("card-thermo-01", "again") - 5 * 60) < 120
-    assert abs(await due_after("card-thermo-02", "hard") - 86400) < 120
-    assert abs(await due_after("card-thermo-03", "good") - 3 * 86400) < 120
+    again_delta, again_state = await grade_delta("card-thermo-01", "again")
+    good_delta, good_state = await grade_delta("card-thermo-02", "good")
+    easy_delta, easy_state = await grade_delta("card-thermo-03", "easy")
+
+    assert 0 < again_delta < good_delta < easy_delta
+    assert easy_delta >= 86400 - 120  # graduated to review, days-scale interval
+    # NOTE: reps is ≥1 (not ==1) — the journey test above graded these same
+    # seeded cards first; the test DB is shared per session.
+    assert again_state["reps"] >= 1 and good_state["reps"] >= 1
+    for st in (again_state, good_state, easy_state):
+        assert st["state"] != "new"
+        assert st["stability"] is not None
+        assert st["difficulty"] is not None
+        assert st["intervalDays"] is not None
 
 
 @pytest.mark.asyncio

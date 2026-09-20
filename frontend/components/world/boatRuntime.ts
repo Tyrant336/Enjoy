@@ -40,6 +40,12 @@ export function hasBoatRuntime(deckId: string): boolean {
   return registry.has(deckId);
 }
 
+/** Live XZ positions of every registered (afloat) boat — the ocean shader
+ *  uploads these per frame so the mirror zone hugs every hull. */
+export function readAllBoatPositions(): THREE.Vector3[] {
+  return [...registry.values()].map((rt) => rt.pos);
+}
+
 export function dropBoatRuntime(deckId: string): void {
   registry.delete(deckId);
 }

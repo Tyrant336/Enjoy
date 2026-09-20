@@ -4,7 +4,7 @@
 > deck names like "Cell Division 1", card questions, grade buttons).
 > Labels must be **toggleable**: the user can turn all world labels **on and off**.
 > Visual design of the pills themselves: see the local visual-reference pack (gitignored) §7
-> (ivory `#EDEDDD` pill, navy `#1A203B` text, soft shadow, rounded sans).
+> (cream `#F7F1DE` pill, navy `#1A203B` text, soft shadow, rounded sans).
 > Comfort rules from `REQUIREMENTS.md` §2 / NFR-1 apply to every transition below.
 
 ---
@@ -24,8 +24,8 @@
 
 - **FR-L1.1** One global **label visibility state**: `labelsVisible: boolean`. Default: **ON**.
 - **FR-L1.2** The user can flip it three ways — all equivalent, one shared state:
-  1. A small **UI button** (top-corner, cream pill style, eye/tag icon, text
-     "Labels"). It must follow the palette (ivory/navy, no red, ever).
+  1. A small **UI button** (in the top-right ViewPanel, cream chrome style,
+     tag emoji, text "🏷 Labels"). It must follow the palette (cream/navy, no red, ever).
   2. **Keyboard shortcut:** `L` (and it must not fire while typing in the chat box).
   3. **Chat command:** typing "labels off" / "hide labels" / "labels on" to the
      Orchestrator sets the same state (Orchestrator emits the toggle command like

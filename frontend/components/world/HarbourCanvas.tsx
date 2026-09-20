@@ -5,12 +5,13 @@
  *
  * Assembles: sky dome, ocean, fishboat ("Today"), lamp buoy ("Journal"),
  * the circling fleet + docked boats (from worldStore via worldApi), review
- * POV, fog, ambient-dominant lighting (the locked local visual spec:
- * overcast studio, no hard shadows), CameraRig, WorldOverlays.
+ * POV, fog, the two-light toon rig (bright-day grade: hemisphere + warm key
+ * + mauve fill, NO shadow maps — grounding is the hull-hugging reflection),
+ * CameraRig, WorldOverlays.
  *
- * Endline rule (§2.4): scene fog uses the SHARED mist color (Ocean.tsx
- * MIST_COLOR) with full density by 700 u — the 5000 u ocean rim is always
- * deep inside full fog, so no plane edge can ever show, from any angle.
+ * Endline rule (§2.4): sky h=0, the water's seam weld and the renderer clear
+ * color are ONE value (Ocean.tsx MIST_COLOR), and scene fog dissolves the
+ * toon props into the pale aqua haze — no plane edge can ever show.
  *
  * While underwater (worldMode === "underwater") Layer A PAUSES rendering
  * (frameloop "never") — perf, NFR-5 / §4.3.2. It stays mounted so surfacing
@@ -27,7 +28,7 @@ import * as THREE from "three";
 import { PALETTE } from "@/lib/theme";
 import { CAMERA_PRESETS } from "./layout";
 import { useWorldStore } from "./worldStore";
-import Ocean, { MIST_COLOR } from "./Ocean";
+import Ocean from "./Ocean";
 import SkyDome from "./SkyDome";
 import Fishboat from "./Fishboat";
 import LampBuoy from "./LampBuoy";
@@ -89,19 +90,22 @@ export class WorldErrorBoundary extends Component<
 function SceneContent() {
   return (
     <>
-      {/* Fog covers the near-field props (boats/lamp). The OCEAN fogs itself
-          (its shader converges to MIST_COLOR with distance — Ocean.tsx), so
-          the 5000 u plane rim can never show. NOTE: scene fog on the ocean's
-          ShaderMaterial painted a bright rim at the waterline (fogColor not
-          refreshed → white) — that path is deliberately gone. */}
-      <fog attach="fog" args={[MIST_COLOR, 80, 700]} />
+      {/* Fog only touches the fog-enabled materials (the toon boats/lamp);
+          the sky/water ShaderMaterials ignore fog by construction — the
+          no-endline weld is the shaders' job (Ocean.tsx / SkyDome.tsx). */}
+      <fog attach="fog" args={[PALETTE.fog.hex, 120, 1400]} />
+      {/* Clear color = the horizon weld: any unshaded pixel (e.g. below a
+          mirror clip plane) stays seamless with sky and far water. */}
+      <color attach="background" args={[PALETTE.horizonWeld.hex]} />
       <SkyDome />
       <Ocean />
 
-      {/* Overcast-studio lighting: ambient-dominant, no cast shadows. */}
-      <hemisphereLight args={[PALETTE.skyMid.hex, PALETTE.waterMid.hex, 0.9]} />
-      <ambientLight intensity={0.45} />
-      <directionalLight position={[18, 30, 12]} intensity={0.55} color={PALETTE.mist.hex} />
+      {/* Two-light toon rig (bright-day grade): teal hemisphere ambient,
+          warm FIXED key high upper-left, mauve fill on the shadow sides.
+          No flat ambient, no shadow maps — grounding is the reflection. */}
+      <hemisphereLight args={[PALETTE.hemiSky.hex, PALETTE.hemiGround.hex, 1.25]} />
+      <directionalLight position={[-35, 80, 25]} intensity={2.3} color={PALETTE.keySun.hex} />
+      <directionalLight position={[30, 18, -28]} intensity={0.55} color={PALETTE.fillMauve.hex} />
 
       <Suspense fallback={null}>
         <Fishboat />
@@ -125,9 +129,10 @@ export default function HarbourCanvas() {
           frameloop={worldMode === "underwater" ? "never" : "always"}
           gl={{ antialias: true, toneMapping: THREE.NoToneMapping }}
           camera={{
-            fov: 45,
+            // 40° vfov: the measured reference frame the grade was tuned on.
+            fov: 40,
             near: 0.1,
-            far: 3000,
+            far: 5000,
             position: [
               CAMERA_PRESETS.overview.pos[0],
               CAMERA_PRESETS.overview.pos[1],

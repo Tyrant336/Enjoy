@@ -1,0 +1,10 @@
+# Binary assets — never line-ending-convert
+*.pdf binary
+*.pptx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.webm binary
+*.apkg binary
+*.zip binary

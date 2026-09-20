@@ -68,6 +68,21 @@ def task_schema(t: m.StudyTask) -> s.StudyTask:
     )
 
 
+def world_user_schema(user: m.User) -> s.WorldUser:
+    """THE one ORM→contract mapping for the user's prefs (reused by
+    PUT /api/preferences; §5.2).
+
+    Product defaults for prefs never set yet (not fallbacks hiding a broken
+    upstream — the user simply hasn't chosen; §7.4 toggle).
+    """
+    prefs = user.prefs
+    return s.WorldUser(
+        timezone=user.timezone,
+        labels_visible=bool(prefs.get("labelsVisible", True)),
+        reduced_motion=bool(prefs.get("reducedMotion", False)),
+    )
+
+
 def record_schema(r: m.Record) -> s.Record:
     """THE one ORM→contract mapping for Record (reused by scheduler/review)."""
     return s.Record(
@@ -348,15 +363,8 @@ async def build_world_state(session: AsyncSession, user: m.User) -> s.WorldState
         )
     ).scalar_one()
 
-    prefs = user.prefs
     return s.WorldState(
-        user=s.WorldUser(
-            timezone=user.timezone,
-            # Product defaults for prefs never set yet (not fallbacks hiding a
-            # broken upstream — the user simply hasn't chosen; §7.4 toggle).
-            labels_visible=bool(prefs.get("labelsVisible", True)),
-            reduced_motion=bool(prefs.get("reducedMotion", False)),
-        ),
+        user=world_user_schema(user),
         active_plan=active_plan,
         decks=decks,
         reviewing=await _reviewing(session, user),

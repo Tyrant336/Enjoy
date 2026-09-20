@@ -8,20 +8,24 @@
  * is white-ish, so per-deck pastel tinting is a material color multiply using
  * the approved tokens only (purple/sage/grey-blue — never red, §2.4).
  * Fails loudly if the sail mesh is missing.
+ *
+ * The model is normalized to a world length (fitToWater) — reflections come
+ * from the planar-mirror ocean (Ocean.tsx), never from mirrored clones.
  */
 
 import { useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { PALETTE } from "@/lib/theme";
-import { addOutlines, cloneScene, makeReflection, toToon } from "./modelUtils";
+import { addOutlines, cloneScene, fitToWater, toToon } from "./modelUtils";
 
-export type SmallBoatModel = {
-  model: THREE.Object3D;
-  reflection: THREE.Object3D;
-};
+/** Hull draft below the waterline (fitToWater) and navy linework width in
+ *  WORLD units (bright-day grade); the outline width is converted to
+ *  geometry-local units through the fit scale. */
+const DRAFT = 0.12;
+const OUTLINE_WORLD = 0.1;
 
-export function useSmallBoatModel(sailTint: string): SmallBoatModel {
+export function useSmallBoatModel(sailTint: string, length: number): THREE.Object3D {
   const { scene } = useGLTF("/models/smallboat.glb");
 
   return useMemo(() => {
@@ -62,9 +66,10 @@ export function useSmallBoatModel(sailTint: string): SmallBoatModel {
       );
     }
 
-    addOutlines(model, 0.05);
-    return { model, reflection: makeReflection(model, 0.45, 1.8) };
-  }, [scene, sailTint]);
+    const fitScale = fitToWater(model, length, DRAFT);
+    addOutlines(model, OUTLINE_WORLD / fitScale);
+    return model;
+  }, [scene, sailTint, length]);
 }
 
 useGLTF.preload("/models/smallboat.glb");

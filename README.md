@@ -37,6 +37,7 @@ the world:
 | `docs/sessions/` | Session logs — what was done, when, why |
 | `docs/RESEARCH.md` | Research — emotional comfort + time-saving evidence & suggestions |
 | `docs/LABELS.md` | Label system spec — world labels toggle on/off |
+| `docs/presentation/` | Pitch deck (`enjoy-pitch.pptx` + `make_pptx.py` generator) and 2-min video script/shot list (`SCRIPT.md`) |
 | `opensource/` | Vetted open-source building blocks + `distill/` integration specs |
 
 ## Setup
@@ -45,6 +46,34 @@ the world:
 cp .env.example .env   # then paste your OpenRouter key into .env
 ```
 
+## Run it
+
+```bash
+docker compose up -d db                                    # PostgreSQL on :5433
+cd Backend && .venv/Scripts/python.exe -m scripts.seed     # seeded demo world
+cd Backend && .venv/Scripts/python.exe -m uvicorn app.main:app --port 8000
+cd frontend && npm run dev                                 # http://localhost:3000
+```
+
+The frontend auto-sends a `X-Harbour-User-Id` (localStorage UUID); the seed
+script creates the demo user `user-seed-01` (fishboat + “Thermo 1” circling
+deck + docked “Thermo Basics” + 48-node atlas).
+
 ## Current state
 
-Project scaffolding stage — see `docs/sessions/` for the latest session log.
+**P1 built and QA'd end-to-end** (session 030, `docs/sessions/030-2026-09-20-finale.md`):
+upload a PDF/slides/notes via the 📎 in the chat bar → a flashcard-deck boat
+joins the fleet and the underwater atlas grows (one upload feeds both agents);
+click a deck boat to review (keyboard: `1–4` grade, `Esc` back); completing a
+deck docks it at the lamp with a downloadable `.apkg` link; 🐢 Calm-motion and
+🏷 Labels toggles persist via `PUT /api/preferences`. Backend suite: 202 passed,
+96% coverage.
+
+**Polish pass** (sessions 031–032): flotilla ring doubled (R=180) with small
+boats trailing the fishboat astern; clicking a deck boat makes it **peel out**
+of the ring with a lantern-cream selection halo while a chase camera follows it
+into review; the whole flotilla freezes mid-review so nothing distracts;
+Today/Global cameras land dead-center; all small boats one uniform size.
+A 53 s golden-path demo video was recorded (`Background/enjoy-demo-2026-09-20.mp4`,
+local-only). Pitch deck + 2-min script live in `docs/presentation/`.
+See `docs/sessions/` for the full log.

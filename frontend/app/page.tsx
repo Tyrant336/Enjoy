@@ -16,7 +16,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import { LABEL, MOTION, PALETTE } from "@/lib/theme";
+import { PALETTE } from "@/lib/theme";
 import { worldApi } from "@/lib/worldApi";
 import { useWorldStore } from "@/components/world/worldStore";
 import DiveOverlay from "@/components/world/DiveOverlay";
@@ -25,14 +25,16 @@ import UserBootstrap from "@/components/ui/UserBootstrap";
 import ChatPanel from "@/components/ui/ChatPanel";
 import TourUI from "@/components/ui/TourUI";
 import TaskSheet from "@/components/ui/TaskSheet";
+import JournalSheet from "@/components/ui/JournalSheet";
 import Banners from "@/components/ui/Banners";
+import ViewPanel from "@/components/ui/ViewPanel";
+import HintLine from "@/components/ui/HintLine";
 
 const HarbourCanvas = dynamic(() => import("@/components/world/HarbourCanvas"), {
   ssr: false,
 });
 
 export default function Home() {
-  const labelsVisible = useWorldStore((s) => s.labelsVisible);
   const toggleLabels = useWorldStore((s) => s.toggleLabels);
 
   // FR-L1.2.2: `L` toggles labels — never while typing in an input.
@@ -65,40 +67,10 @@ export default function Home() {
       <ChatPanel />
       <TourUI />
       <TaskSheet />
+      <JournalSheet />
       <Banners />
-
-      {/* Label master toggle (LABELS.md FR-L1.2.1) — always visible. */}
-      <div
-        style={{
-          position: "absolute",
-          top: 16,
-          right: 76, // clear of TourUI's "?" replay pill at right:16
-          zIndex: 30,
-        }}
-      >
-        <button
-          type="button"
-          onClick={toggleLabels}
-          aria-pressed={labelsVisible}
-          title="Toggle world labels (L)"
-          style={{
-            background: LABEL.fill,
-            color: LABEL.text,
-            boxShadow: LABEL.shadow,
-            border: "none",
-            borderRadius: 999,
-            padding: "8px 16px",
-            fontSize: 13,
-            fontWeight: 550,
-            fontFamily: "ui-rounded, system-ui, sans-serif",
-            cursor: "pointer",
-            opacity: labelsVisible ? 1 : 0.55,
-            transition: `opacity 300ms ${MOTION.ease}`,
-          }}
-        >
-          Labels
-        </button>
-      </div>
+      <ViewPanel />
+      <HintLine />
     </div>
   );
 }

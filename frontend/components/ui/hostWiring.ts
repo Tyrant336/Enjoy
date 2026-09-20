@@ -73,5 +73,24 @@ export function registerHostHandlers(): void {
     onDismissTour: (roadmapId) => {
       void dismissTour(roadmapId);
     },
+
+    /** Natural tour completion (no tour_end SSE exists) — clear the chrome. */
+    onTourFinished: () => {
+      useUiStore.getState().setTourEnded();
+    },
+
+    /** FR-5.5: tour step narrations join the readable transcript. */
+    onTourNarrate: (text) => {
+      useUiStore.getState().addTranscript({
+        id: crypto.randomUUID(),
+        who: "narrator",
+        text,
+      });
+    },
+
+    /** FR-4.3: the lamp's "Journal" pill opens the journal view. */
+    onOpenJournal: () => {
+      useUiStore.getState().setJournalOpen(true);
+    },
   });
 }

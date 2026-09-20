@@ -53,8 +53,11 @@ export type BoatEntry = {
   sailTint: string;
   leader: boolean;
   status: BoatStatus;
-  /** Circle phase at spawn/freeze (rad). Live angle lives in boatRuntime. */
-  baseAngle: number;
+  /** Canonical Deck.apkgUrl (FR-2.7 export) — the docked boat's Anki link. */
+  apkgUrl: string | null;
+  /** Stable fleet-slot index: drives the staggered pile offsets and the
+   *  golden-angle wander phase (layout.ts pileSlot, Fleet.tsx). */
+  pileIndex: number;
   /** Bumped on spawn/dock to retrigger entrance animations. */
   animNonce: number;
 };
@@ -87,6 +90,14 @@ export type HostHandlers = {
   onAcceptTour?: (roadmapId: string) => void;
   /** User declined the pending tour offer ("Not now"). */
   onDismissTour?: (roadmapId: string) => void;
+  /** The tour runner finished the LAST step naturally (FR-5.3) — the host
+   *  clears the tour chrome (Skip tour) since no tour_end SSE event exists
+   *  for natural completion. */
+  onTourFinished?: () => void;
+  /** Each tour step's narration (FR-5.5: narration is also readable text). */
+  onTourNarrate?: (text: string) => void;
+  /** User clicked the lamp's "Journal" pill (FR-4.3 journal view). */
+  onOpenJournal?: () => void;
 };
 
 const LABELS_STORAGE_KEY = "harbour_labels_visible";
@@ -112,6 +123,13 @@ export type WorldStore = {
   lampPulseNonce: number;
   reducedMotion: boolean;
   cameraRequest: { preset: WorldCameraPreset; nonce: number; durationMs: number };
+  /** Flotilla freeze during review (session 032, owner ask): while a review
+   *  owns the student's attention the whole flotilla holds its breath — the
+   *  orbit clock pauses. `accum` = total paused seconds, `since` = the
+   *  frame-clock time the current pause started (both in THREE.Clock
+   *  seconds). Written ONLY by orbitNow (lazy, idempotent, two sets per
+   *  review — transition frames only). */
+  orbitPause: { accum: number; since: number | null };
 
   boats: Record<string, BoatEntry>;
   reviewing: ReviewState | null;
@@ -195,6 +213,7 @@ export const useWorldStore = create<WorldStore>((set, get) => {
     lampPulseNonce: 0,
     reducedMotion: readPrefersReducedMotion(),
     cameraRequest: { preset: "overview", nonce: 0, durationMs: MOTION.cameraMs },
+    orbitPause: { accum: 0, since: null },
 
     boats: {},
     reviewing: null,
@@ -242,7 +261,8 @@ export const useWorldStore = create<WorldStore>((set, get) => {
         // The first circling boat is the leader (§2.3.2: 1.15×, soft purple).
         leader: deck.boatState === "circle" && circling.length === 0,
         status: deck.boatState === "circle" ? "circle" : deck.boatState === "reviewing" ? "reviewing" : "docked",
-        baseAngle: (Object.keys(boats).length * 2.2 + 0.6) % (Math.PI * 2),
+        apkgUrl: deck.apkgUrl,
+        pileIndex: Object.keys(boats).length,
         animNonce: 1,
       };
       if (entry.leader) entry.sailTint = SAIL_TINTS.purple;
@@ -372,8 +392,12 @@ export const useWorldStore = create<WorldStore>((set, get) => {
         const existing = prev.boats[deck.id];
         if (existing) {
           // Preserve local presentation memory (anim nonce, leader flag,
-          // circle phase); only the canonical status is rebuilt.
-          boats[deck.id] = { ...existing, status: deck.boatState };
+          // pile slot); canonical status + export URL are rebuilt.
+          boats[deck.id] = {
+            ...existing,
+            status: deck.boatState,
+            apkgUrl: deck.apkgUrl,
+          };
           return;
         }
         const circlingSoFar = Object.values(boats).filter((b) => b.status === "circle");
@@ -383,7 +407,8 @@ export const useWorldStore = create<WorldStore>((set, get) => {
           sailTint: sailTintFor(deck.id),
           leader: deck.boatState === "circle" && circlingSoFar.length === 0,
           status: deck.boatState,
-          baseAngle: (i * 2.2 + 0.6) % (Math.PI * 2),
+          apkgUrl: deck.apkgUrl,
+          pileIndex: i,
           animNonce: 1,
         };
         if (entry.leader) entry.sailTint = SAIL_TINTS.purple;
@@ -426,7 +451,10 @@ export const useWorldStore = create<WorldStore>((set, get) => {
         reviewing,
         lampGlow: glow, // absolute level; a rebuild is not a victory pulse
         labelsVisible: state.user.labelsVisible,
-        reducedMotion: state.user.reducedMotion,
+        // §7.4: reduced motion is accessibility — sticky ON. The server value
+        // can switch it on, but a server `false` never overrides an OS-level
+        // `prefers-reduced-motion` (the store's seed) or a manual toggle-on.
+        reducedMotion: state.user.reducedMotion || prev.reducedMotion,
         tourOfferId: state.pendingTour?.roadmapId ?? null,
       });
     },
@@ -481,6 +509,9 @@ export const useWorldStore = create<WorldStore>((set, get) => {
       if (!cur) return;
       if (cur.stepIndex + 1 >= cur.roadmap.steps.length) {
         get().endTour();
+        // Natural completion: no tour_end SSE event exists — the host clears
+        // its tour chrome (Skip tour) through this intent (one path, seam).
+        get().hostHandlers.onTourFinished?.();
         return;
       }
       set({ tour: { ...cur, stepIndex: cur.stepIndex + 1 } });
@@ -497,3 +528,29 @@ export const useWorldStore = create<WorldStore>((set, get) => {
     setHostHandlers: (h) => set({ hostHandlers: h }),
   };
 });
+
+/**
+ * orbitNow — THE paused-aware orbit clock (session 032, owner ask: "the
+ * boats that aren't needed should stop following while I solve flashcards").
+ * Every `orbitState(...)` consumer (Fishboat / Fleet / CameraRig / Ocean)
+ * maps the raw frame clock through this — one clock, one path. While a
+ * review is active the flotilla freezes exactly where it is (the fishboat
+ * included — freezing only the small boats would leave them chasing the tug
+ * for minutes, and freezing the tug naively would teleport it on exit).
+ * Pause/resume is derived lazily from `reviewing`, so EVERY review entry/exit
+ * path (enterReview, exitReview, dock-under-review, state rebuilds) is
+ * covered with zero wiring. Writes happen on transition frames only.
+ */
+export function orbitNow(t: number): number {
+  const s = useWorldStore.getState();
+  let { accum, since } = s.orbitPause;
+  if (s.reviewing !== null && since === null) {
+    since = t;
+    useWorldStore.setState({ orbitPause: { accum, since } });
+  } else if (s.reviewing === null && since !== null) {
+    accum += t - since;
+    since = null;
+    useWorldStore.setState({ orbitPause: { accum, since } });
+  }
+  return since === null ? t - accum : since - accum;
+}

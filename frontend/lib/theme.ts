@@ -80,7 +80,8 @@ export const PALETTE = {
   greyBlue: token(202, 10, 55),
   /** Lantern glow core `#FFFFC2` (60°, 24%, 100%) — the only warm light. */
   lanternGlow: token(60, 100, 88),
-  /** Reflection tint (object color dragged toward water) `#77AAAE`. */
+  /** Reflection absorption tint `#77AAAE` (unused since the bright-day grade;
+   *  kept as the measured palette record — reflections now tint in-shader). */
   reflectionTint: token(184, 25, 57),
   /** Sail: dusty soft purple `#928699` (280°, 11%, 59%). */
   sailPurple: token(280, 11, 56),
@@ -90,6 +91,50 @@ export const PALETTE = {
   sailBlueGrey: token(182, 34, 73),
   /** Soft amber — warnings / "Again" grade / errors (never red). */
   softAmber: token(38, 78, 62),
+  /** Sun glow in the sky dome — warm cream halo (the sun's only warm mark). */
+  sunGlow: token(41, 100, 88),
+
+  /* ── Bright-day grade (session 024): two-light toon rig, fog, clouds ── */
+  /** Hemisphere sky `#CDDFDF` — pale teal ambient from above. */
+  hemiSky: token(179.5, 21.1, 83.9),
+  /** Hemisphere ground bounce `#2A5A66` — deep water teal from below. */
+  hemiGround: token(191.5, 41, 28.2),
+  /** Key light `#FFEFD2` — warm white, high and fixed. */
+  keySun: token(38.2, 99, 91.2),
+  /** Mauve fill light `#A97E89` (hue 344.6°) — shadow sides hue-shift mauve.
+   *  Ported one hue step cooler than the 346° reference value so it stays
+   *  OUTSIDE the forbidden red range (NFR-2 zero-tolerance, session 024). */
+  fillMauve: token(344.05, 19.64, 57.8),
+  /** Lamp lantern light `#F0A84E` — the one warm accent (FR-4.4). */
+  lampAmber: token(33, 84.6, 62.5),
+  /** Scene fog `#D9EDED` — pale aqua haze; distant props dissolve into it. */
+  fog: token(179.5, 34.7, 89),
+  /** Cloud shadow `#E2F3F3` — barely below sky value (no gray bellies). */
+  cloudShadow: token(179.5, 40.5, 91.9),
+  /** Cloud bright `#F8FCFB` — near-white puffs clearly above sky value. */
+  cloudBright: token(164.5, 39, 97.9),
+  /** Horizon weld `#A4D5D7` — sky h=0 = far water = renderer clear color. */
+  horizonWeld: token(181.9, 38.2, 74.3),
+
+  /* ── Calm cream chrome language (DOM chrome only, session 023) ── */
+  /** Chrome surface cream `#F7F1DE`. */
+  chromeCream: token(44, 62, 92),
+  /** Chrome ink — chrome text `#272A3F`. */
+  chromeInk: token(231, 24, 20),
+  /** Chrome teal — subtitle pill bg / shadow tint `#1D3A42`. */
+  chromeTeal: token(193, 38.9, 18.6),
+  /** Subtitle pill text `#F2FBF8`. */
+  subtitleText: token(160, 52.9, 96.7),
+  /** Action accent: sky `#5BBEE9` (white text). */
+  skyAction: token(198.2, 76.3, 63.5),
+  /** Action accent: sage `#7FA08C` (white text). */
+  sageAction: token(143.6, 14.8, 56.3),
+  /** Action accent: cornflower `#9FB4CC` (white text). */
+  cornflower: token(212, 30.6, 71.2),
+  /** Action accent: grey-mauve `#8E8A93` (white text). */
+  mauve: token(262, 4, 56),
+  /** Action accent: pale sand `#E4DCD0` (ink text). */
+  paleSand: token(36, 27, 85.5),
 
   /* ── Underwater (REQUIREMENTS §2.2: deep teal/cyan, dark, additive) ── */
   /** Underwater deep background — dark teal. */
@@ -120,9 +165,24 @@ export const CLUSTER_PALETTE: readonly Token[] = [
   token(320, 60, 68),
 ];
 
+/**
+ * Calm cream chrome language — DOM chrome shape/motion constants.
+ * Colors live in PALETTE (hue-guarded); these are radii, shadows, font.
+ */
+export const CHROME = {
+  radiusButton: 10,
+  radiusCard: 18,
+  radiusPill: 999,
+  font: "600 13px system-ui, sans-serif",
+  shadowButton: "0 2px 6px rgba(29,58,66,.33)",
+  shadowCard: "0 8px 30px rgba(29,58,66,.4)",
+  hoverScale: 1.05,
+  hoverMs: 80,
+} as const;
+
 /** Label pill styling constants (docs/LABELS.md + locked visual spec). */
 export const LABEL = {
-  fill: PALETTE.mist.hex,
+  fill: PALETTE.chromeCream.hex,
   text: PALETTE.ink.hex,
   shadow: "0 3px 14px rgba(15, 18, 34, 0.18)",
 } as const;

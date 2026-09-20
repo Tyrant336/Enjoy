@@ -1,10 +1,14 @@
 /**
  * modelUtils.ts — GLB preparation helpers implementing the locked look
- * (local visual spec: outlines, reflections, cel shading):
+ * (local visual spec: outlines, cel shading, planar-mirror water):
  *
- *  - toToon:        MeshStandardMaterial → MeshToonMaterial (3-step banded fill)
- *  - addOutlines:   inverted-hull outline shell, flat navy `ink`, per mesh
- *  - makeReflection: mirrored clone (scale.y = -1), teal-tinted, translucent
+ *  - toToon:      MeshStandardMaterial → MeshToonMaterial (4-step banded fill)
+ *  - addOutlines: inverted-hull outline shell, flat navy `ink`, per mesh
+ *  - fitToWater:  normalize a model to a world length + waterline draft
+ *
+ * Reflections are NOT made here: the ocean is a true planar mirror
+ * (Ocean.tsx) — mirrored-geometry clones were removed (they rendered as
+ * white blobs, never as tinted mirror images).
  *
  * All helpers mutate/clone THREE objects explicitly and fail loudly on misuse.
  */
@@ -14,10 +18,10 @@ import { PALETTE } from "@/lib/theme";
 
 let gradientMap: THREE.DataTexture | null = null;
 
-/** Shared 3-step toon gradient (flat fills, 2 tones max per object — the locked local visual spec). */
+/** Shared 4-step toon gradient — the few-band cel ramp of the bright-day grade. */
 function getGradientMap(): THREE.DataTexture {
   if (gradientMap) return gradientMap;
-  const data = new Uint8Array([120, 190, 255, 255]); // 3 tones + pad (RGBA min 4)
+  const data = new Uint8Array([90, 150, 210, 255]); // 4 tones
   gradientMap = new THREE.DataTexture(data, 4, 1, THREE.RedFormat);
   gradientMap.minFilter = THREE.NearestFilter;
   gradientMap.magFilter = THREE.NearestFilter;
@@ -97,108 +101,23 @@ export function addOutlines(root: THREE.Object3D, thickness: number): void {
   }
 }
 
-const REFLECT_VERT = /* glsl */ `
-  varying vec3 vWorld;
-  #include <fog_pars_vertex>
-  void main() {
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    vWorld = world.xyz;
-    vec4 mvPosition = viewMatrix * world;
-    gl_Position = projectionMatrix * mvPosition;
-    #include <fog_vertex>
-  }
-`;
-const REFLECT_FRAG = /* glsl */ `
-  uniform vec3 uColor;
-  uniform vec3 uWater;
-  uniform float uOpacity;
-  uniform float uFadeDepth;
-  varying vec3 vWorld;
-  #include <fog_pars_fragment>
-  void main() {
-    // Strong at the waterline, dissolving within ~1 object-height below it;
-    // color dragged toward the deep-water hue with depth (the locked local
-    // visual spec: reflections are prominent, water-tinted, fading).
-    float keep = smoothstep(-uFadeDepth, -0.15, vWorld.y);
-    vec3 col = mix(uWater, uColor, smoothstep(-uFadeDepth * 0.7, 0.0, vWorld.y));
-    // Mirror physics: reflections exist at grazing sight-lines only. This
-    // also keeps the mirrored clone from smudging the water in the §2.6
-    // top-down anchor view.
-    float graze = 1.0 - clamp(abs(normalize(vWorld - cameraPosition).y), 0.0, 1.0);
-    gl_FragColor = vec4(col, uOpacity * keep * pow(graze, 1.5));
-    #include <fog_fragment>
-    #include <tonemapping_fragment>
-    #include <colorspace_fragment>
-  }
-`;
-
 /**
- * Planar reflection, cheap variant (the locked local visual spec): a mirrored
- * clone hung upside-down under the waterline, slightly ELONGATED downward
- * (scale.y ≈ -1.22), rendered with a depth-fade shader (crisp at the
- * waterline, dissolves within ~1 object-height, colors dragged toward the
- * water hue; the lantern's warm glow reflects too). Place the returned object
- * as a sibling of the original inside the same animated group, with y=0 at
- * the waterline.
+ * Normalize a loaded model to its world footprint: uniform scale so the
+ * longest horizontal dimension is `length`, horizontally centered on the
+ * origin, hull riding at `draft` below y=0 (the waterline — the hull visibly
+ * floats). Returns the applied scale so callers can convert world-unit
+ * widths (e.g. outline thickness) into geometry-local units.
  */
-export function makeReflection(
-  source: THREE.Object3D,
-  opacity = 0.5,
-  fadeDepth = 5.5,
-): THREE.Object3D {
-  const clone = source.clone(true);
-  const tint = new THREE.Color(PALETTE.reflectionTint.hex);
-  const water = new THREE.Color(PALETTE.waterDeep.hex);
-  clone.traverse((obj) => {
-    if (!(obj instanceof THREE.Mesh)) return;
-    obj.userData.isOutline = false;
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    const reflected = mats.map((m) => {
-      const base =
-        m instanceof THREE.MeshStandardMaterial ||
-        m instanceof THREE.MeshToonMaterial
-          ? m.color.clone()
-          : new THREE.Color(0xffffff);
-      // Reflection = object color dragged toward the water hue.
-      const color = base.lerp(tint, 0.45);
-      // The lantern's warm glow reflects too (the locked local visual spec).
-      if (
-        (m instanceof THREE.MeshStandardMaterial ||
-          m instanceof THREE.MeshToonMaterial) &&
-        (m.emissive.r + m.emissive.g + m.emissive.b) > 0.1
-      ) {
-        color.copy(m.emissive).lerp(tint, 0.25);
-      }
-      return new THREE.ShaderMaterial({
-        uniforms: THREE.UniformsUtils.merge([
-          THREE.UniformsLib.fog,
-          {
-            uColor: { value: color },
-            uWater: { value: water.clone() },
-            uOpacity: { value: opacity },
-            uFadeDepth: { value: fadeDepth },
-          },
-        ]),
-        vertexShader: REFLECT_VERT,
-        fragmentShader: REFLECT_FRAG,
-        transparent: true,
-        depthWrite: false,
-        // The mirrored clone hangs BELOW the opaque ocean surface, whose depth
-        // buffer entry would cull every fragment — reflections must skip the
-        // depth test or they are never seen (visual-review rejection fix).
-        // Occlusion cost: a nearer boat's hull won't cull a far reflection;
-        // hulls barely dip below the waterline, so this stays invisible.
-        depthTest: false,
-        side: THREE.DoubleSide,
-        fog: true,
-      });
-    });
-    obj.material = Array.isArray(obj.material) ? reflected : reflected[0];
-    obj.raycast = () => null; // reflections are never click targets
-  });
-  clone.scale.y = -1.22; // slightly elongated, like the reference
-  clone.renderOrder = 1;
-  return clone;
+export function fitToWater(obj: THREE.Object3D, length: number, draft: number): number {
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const s = length / Math.max(size.x, size.z, 0.001);
+  obj.scale.setScalar(s);
+  box.setFromObject(obj);
+  obj.position.sub(box.getCenter(new THREE.Vector3()));
+  box.setFromObject(obj);
+  obj.position.y -= box.min.y + draft;
+  return s;
 }
 
 /** Clone a loaded GLTF scene for one world instance (no skinning in our GLBs). */
@@ -219,12 +138,6 @@ export function setGroupOpacity(root: THREE.Object3D, opacity: number): void {
       if (m instanceof THREE.ShaderMaterial && m.uniforms.uAlpha) {
         m.uniforms.uAlpha.value = opacity;
         m.transparent = opacity < 1;
-      } else if (m instanceof THREE.ShaderMaterial && m.uniforms.uOpacity) {
-        // Reflection materials (uOpacity is the base opacity — scale it).
-        if (m.userData.baseOpacity === undefined) {
-          m.userData.baseOpacity = m.uniforms.uOpacity.value as number;
-        }
-        m.uniforms.uOpacity.value = (m.userData.baseOpacity as number) * opacity;
       } else if (
         m instanceof THREE.MeshToonMaterial ||
         m instanceof THREE.MeshStandardMaterial ||

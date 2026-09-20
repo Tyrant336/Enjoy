@@ -8,14 +8,14 @@ broken fixture fails loudly here — never inside Agent L's seed run.
 
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
 
 from app.schemas import Deck, Flashcard, KnowledgeGraph, Record, StudyPlan
-from scripts.seed_dates import resolve_fixture, resolve_token
+from scripts.seed_dates import resolve_fixture, resolve_natural_date, resolve_token
 
 FIXTURE_PATH = (
     Path(__file__).resolve().parents[1] / "scripts" / "fixtures" / "seed_data.json"
@@ -187,3 +187,38 @@ def test_resolve_token_units() -> None:
     assert resolve_token(42, fixed) == 42
     with pytest.raises(ValueError, match="Malformed seed date token"):
         resolve_token("NOW-3h", fixed)
+
+
+# ── natural-language deadline phrases (P1, D2 — wired into the planner) ──────
+
+
+@pytest.mark.parametrize(
+    ("text", "expected_days"),
+    [
+        ("calculus exam in 5 days", 5),
+        ("in 1 day", 1),
+        ("due in 2 weeks", 14),
+        ("in 3 months", 90),
+        ("in a week", 7),
+        ("in a month", 30),
+        ("tomorrow", 1),
+        ("organic chemistry midterm next month", 30),
+        ("next week", 7),
+        ("Exam IN 5 DAYS!", 5),  # case-insensitive
+    ],
+)
+def test_resolve_natural_date(text: str, expected_days: int) -> None:
+    today = date(2026, 9, 19)
+    assert resolve_natural_date(text, today) == today + timedelta(days=expected_days)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "no date mentioned at all",
+        "revise thermodynamics",
+        "daily practice",  # "day" substring must not false-positive
+    ],
+)
+def test_resolve_natural_date_returns_none_without_a_phrase(text: str) -> None:
+    assert resolve_natural_date(text, date(2026, 9, 19)) is None

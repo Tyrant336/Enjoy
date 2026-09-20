@@ -30,7 +30,11 @@ export async function harbourFetch<T>(
   const resp = await fetch(`${BASE_URL}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      // Multipart uploads (FormData) set their own boundary — never force
+      // a JSON content-type on them.
+      ...(init?.body instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
       "X-Harbour-User-Id": userId,
       "X-Harbour-Timezone": timezone,
       ...init?.headers,

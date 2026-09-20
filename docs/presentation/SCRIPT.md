@@ -1,6 +1,6 @@
 # enjoy — 2-minute video script + shot list
 
-> Deck: `docs/presentation/enjoy-pitch.pptx` (8 slides, speaker notes embedded).
+> Deck: `docs/presentation/enjoy-pitch.pptx` (9 slides, speaker notes embedded).
 > Regenerate after edits: `Backend/.venv/Scripts/python.exe docs/presentation/make_pptx.py`
 > **Gameplay capture: LATER** — after T's visual fixes (endline, reflections) and
 > Phase 3 wiring pass Checkpoint review. Slides 4–6 have `>>> GAMEPLAY <<<`
@@ -16,8 +16,9 @@
 | 0:40–1:05 | **S4 → GAMEPLAY A** 💬 | "One sentence becomes a plan." *(type live)* "The orchestrator routes it, the planner templates it, the world shows it." |
 | 1:05–1:30 | **S5 → GAMEPLAY B** ⛵ | "Flashcards are a short sail — question, reveal, four grade boats. Real retrieval practice: the AI never answers for you, it just removes everything else." |
 | 1:30–1:45 | **S6 → GAMEPLAY C** 🪸 | "And knowledge grows beneath the sea. Your portfolio isn't a chart — it's a place." |
-| 1:45–1:55 | **S7** under the hood | "Agents do the plumbing, Postgres is the single truth, one event stream keeps the world honest — and the AI never studies for you." |
-| 1:55–2:00 | **S8** closing | "A returning student is welcomed, never billed for absence. Thank you." |
+| 1:45–1:55 | **S7** tech stack | Talk only the top 3: multi-agent system for higher quality, LangChain to guide the AI, Three.js for the game world. Point at the full list, don't read it. |
+| — | **S8** open-source credits 💙 | Not spoken in the 2:00 — flash during the cut to closing, or use for Q&A ("each agent stands on proven open source"). |
+| 1:55–2:00 | **S9** closing | "A returning student is welcomed, never billed for absence. Thank you." |
 
 ## Gameplay shot list (record AFTER visual fixes — capture checklist)
 
@@ -30,7 +31,7 @@
 - **C · Atlas (15 s):** dive transition → underwater atlas → pan → click a
   node → drawer opens → surface.
 - Optional closer (3 s): slow orbit of the harbour at lamp-glow 0.5 for the
-  final frame under S8.
+  final frame under S9.
 
 ## Recording notes
 
